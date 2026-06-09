@@ -4,7 +4,8 @@ import { createInterface } from "node:readline/promises";
 import { stdin, stdout } from "node:process";
 import { initSite } from "./commands/init.ts";
 import { serve } from "./commands/serve.ts";
-import { build } from "./commands/build.ts";
+import { build, formatBytes } from "./commands/build.ts";
+import { publish, unpublish } from "./commands/publish.ts";
 import { listTemplates } from "./lib/scaffold.ts";
 
 const VERSION = "0.1.0";
@@ -76,11 +77,33 @@ async function cmdServe(positionals: string[], flags: Record<string, string | bo
 
 async function cmdBuild(positionals: string[], flags: Record<string, string | boolean>) {
   const dir = resolve(positionals[0] ?? ".");
-  const { output } = await build(dir, {
+  const { output, fileCount, bytes } = await build(dir, {
     output: str(flags.output),
     pathPrefix: str(flags.pathprefix),
   });
-  console.log(`✓ Built to ${relativeOrDot(output)}`);
+  console.log(`✓ Built ${fileCount} files (${formatBytes(bytes)}) to ${relativeOrDot(output)}`);
+}
+
+async function cmdPublish(positionals: string[]) {
+  const dir = resolve(positionals[0] ?? ".");
+  const { url, plan, repoCreated } = await publish(dir);
+
+  console.log(`\n✓ Published to ${url}`);
+  if (repoCreated) console.log("  (first deploy can take a minute to go live)");
+
+  if (plan.dns && plan.cname) {
+    console.log(`\nTo point ${plan.cname} at GitHub, add these DNS records at your registrar:`);
+    for (const r of plan.dns) {
+      console.log(`  ${r.type.padEnd(5)} ${r.host.padEnd(6)} ${r.value}`);
+    }
+    console.log("\nThe site is live at the github.io URL now; the custom domain works once DNS propagates.");
+  }
+}
+
+async function cmdUnpublish(positionals: string[]) {
+  const dir = resolve(positionals[0] ?? ".");
+  const { repo, removed } = await unpublish(dir);
+  console.log(removed ? `✓ Took ${repo} offline.` : `${repo} was not published.`);
 }
 
 function toTitle(slug: string): string {
@@ -99,6 +122,8 @@ Usage:
   basepage init [dir]      Scaffold a new site (interactive)
   basepage serve [dir]     Live preview with reload on every edit
   basepage build [dir]     Compile to _site/
+  basepage publish [dir]   Deploy to GitHub Pages (browser sign-in, no keys)
+  basepage unpublish [dir] Take the published site offline
 
 init flags:   --template <${listTemplates().join("|")}>  --title <s>  --tagline <s>  --domain <s>  --yes
 serve flags:  --port <n>
@@ -120,6 +145,10 @@ async function main() {
       return cmdServe(positionals, flags);
     case "build":
       return cmdBuild(positionals, flags);
+    case "publish":
+      return cmdPublish(positionals);
+    case "unpublish":
+      return cmdUnpublish(positionals);
     default:
       console.error(`Unknown command: ${command}\n`);
       usage();
