@@ -12,9 +12,9 @@ function tmp() {
   return mkdtempSync(join(tmpdir(), "bp-build-"));
 }
 
-test("builds the default site: html, passthrough css, and url filter honoring pathPrefix", async () => {
+test("builds a site: html, passthrough css, and url filter honoring pathPrefix", async () => {
   const dir = join(tmp(), "site");
-  initSite({ dir, template: "default", title: "Ada", tagline: "Maths", domain: "ada.dev" });
+  initSite({ dir, template: "blog", title: "Ada", tagline: "Maths", domain: "ada.dev" });
 
   await build(dir, { pathPrefix: "/myrepo/" });
 
@@ -29,9 +29,9 @@ test("builds the default site: html, passthrough css, and url filter honoring pa
   expect(html).toContain("Ada");
 });
 
-test("rss feature produces an Atom feed for the default kind", async () => {
+test("rss feature produces an Atom feed for the blog kind", async () => {
   const dir = join(tmp(), "site");
-  initSite({ dir, template: "default", title: "Ada", domain: "ada.dev" });
+  initSite({ dir, template: "blog", title: "Ada", domain: "ada.dev" });
   await build(dir);
   const feedPath = join(dir, "_site", "feed.xml");
   expect(existsSync(feedPath)).toBe(true);
@@ -40,9 +40,9 @@ test("rss feature produces an Atom feed for the default kind", async () => {
   expect(feed).toContain("Ada");
 });
 
-test("minimal kind builds a single page with no feed", async () => {
+test("blank kind builds a single page with no feed", async () => {
   const dir = join(tmp(), "card");
-  initSite({ dir, template: "minimal", title: "Card" });
+  initSite({ dir, template: "blank", title: "Card" });
   await build(dir);
   expect(existsSync(join(dir, "_site", "index.html"))).toBe(true);
   expect(existsSync(join(dir, "_site", "feed.xml"))).toBe(false);

@@ -9,9 +9,9 @@ function tmp() {
   return mkdtempSync(join(tmpdir(), "bp-init-"));
 }
 
-test("scaffolds the default template and merges metadata into the manifest", () => {
+test("scaffolds the blog template and merges metadata into the manifest", () => {
   const dir = join(tmp(), "site");
-  initSite({ dir, template: "default", title: "Ada Lovelace", tagline: "Mathematician", domain: "ada.dev" });
+  initSite({ dir, template: "blog", title: "Ada Lovelace", tagline: "Mathematician", domain: "ada.dev" });
 
   expect(existsSync(join(dir, "basepage.json"))).toBe(true);
   expect(existsSync(join(dir, "eleventy.config.mjs"))).toBe(true);
@@ -27,9 +27,9 @@ test("scaffolds the default template and merges metadata into the manifest", () 
   expect(m.domain).toBe("ada.dev");
 });
 
-test("scaffolds the minimal template with no features", () => {
+test("scaffolds the blank template with no features", () => {
   const dir = join(tmp(), "card");
-  initSite({ dir, template: "minimal", title: "Hi" });
+  initSite({ dir, template: "blank", title: "Hi" });
   const m = readManifest(dir);
   expect(m.kind).toBe("site");
   expect(m.features).toEqual([]);
@@ -38,7 +38,7 @@ test("scaffolds the minimal template with no features", () => {
 
 test("omits unset metadata keys rather than writing undefined", () => {
   const dir = join(tmp(), "site");
-  initSite({ dir, template: "default", title: "Just A Title" });
+  initSite({ dir, template: "personal", title: "Just A Title" });
   const raw = JSON.parse(readFileSync(join(dir, "basepage.json"), "utf8"));
   expect("domain" in raw).toBe(false);
   // picker metadata must not leak into a real site's manifest
@@ -53,6 +53,6 @@ test("rejects an unknown template", () => {
 
 test("refuses to scaffold into a non-empty directory", () => {
   const dir = join(tmp(), "site");
-  initSite({ dir, template: "minimal", title: "first" });
-  expect(() => initSite({ dir, template: "minimal", title: "second" })).toThrow(/not empty|exists/i);
+  initSite({ dir, template: "blank", title: "first" });
+  expect(() => initSite({ dir, template: "blank", title: "second" })).toThrow(/not empty|exists/i);
 });

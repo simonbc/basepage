@@ -19,8 +19,8 @@ export interface TemplateInfo {
   blurb: string;
 }
 
-/** Order templates for the picker: `default` first, then the rest alphabetically. */
-const TEMPLATE_ORDER = ["default", "minimal", "wiki"];
+/** Order templates for the picker; the first is the default. */
+const TEMPLATE_ORDER = ["blank", "personal", "blog", "wiki"];
 
 export function listTemplates(): string[] {
   const names = readdirSync(TEMPLATES_DIR, { withFileTypes: true })

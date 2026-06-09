@@ -7,5 +7,5 @@ layout: base.njk
     <p class="post-meta"><time datetime="{{ page.date | isoDate }}">{{ page.date | readableDate }}</time></p>
   </header>
   {{ content | safe }}
-  <p class="post-back"><a href="{{ '/blog/' | url }}">← All writing</a></p>
+  <p class="post-back"><a href="{{ '/' | url }}">← All posts</a></p>
 </article>

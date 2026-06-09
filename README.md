@@ -1,12 +1,27 @@
 # Basepage
 
-A small CLI for owning a personal website by talking to an AI agent. The agent edits
-plain source files — markdown content **and** the templates/CSS — and Basepage turns
-them into a static site you serve from your own domain. Basepage does no AI: you bring
-your own agent (Claude Code, Codex, a local model). Basepage provides the deterministic
-machinery the agent can't — scaffold, preview, publish.
+A small CLI for owning a website by talking to an AI agent. The agent edits plain
+source files — markdown content **and** the templates/CSS — and Basepage turns them
+into a static site you serve from your own domain. Basepage does no AI: you bring your
+own agent (Claude Code, Codex, a local model). Basepage provides the deterministic
+machinery the agent can't — scaffold, add structure, preview, publish.
 
 Your files, your domain, your model.
+
+## As an agent tool
+
+Basepage is built to be driven by an agent. `init` scaffolds a **blank, legible
+canvas** by default — the agent shapes it from your prompt by editing files and running
+deterministic commands. There's a bundled Claude skill (`skills/basepage/SKILL.md`) so
+you can just say:
+
+> "Build me a blog about climbing, dark and minimal, then preview it."
+
+and the agent picks a starting preset, scaffolds it, writes a post, restyles the
+tokens, and serves it. Install the skill with `cp -r skills/basepage ~/.claude/skills/`.
+
+The boundary: **structure** (kind, pages, posts, features) is deterministic CLI
+commands; **design + prose** is the agent editing files.
 
 ## Install
 
@@ -24,43 +39,52 @@ bun run src/cli.ts <command>     # or, once linked: basepage <command>
 
 | Command | What it does |
 | --- | --- |
-| `basepage init [dir]` | Scaffold a new site (interactive; `--yes` to skip prompts). |
+| `basepage init [dir]` | Scaffold a new site (interactive; blank canvas by default). |
+| `basepage new <page\|post> <name>` | Add a standalone page, or a blog post. |
+| `basepage add <feature>` | Enable a feature (blog, rss, wikilinks, syntax-highlight). |
 | `basepage serve [dir]` | Live preview with reload on every content/CSS edit. |
 | `basepage build [dir]` | Compile to `_site/`. |
 | `basepage publish [dir]` | Deploy to GitHub Pages. |
 | `basepage unpublish [dir]` | Take the published site offline. |
 
-`init` flags: `--template <default\|minimal>` `--title` `--tagline` `--domain` `--yes`
-`serve` flags: `--port`  ·  `build` flags: `--output` `--pathprefix`
+`init` flags: `--template <blank\|personal\|blog\|wiki>` `--title` `--tagline` `--domain` `--yes`
+`new` flags: `--title` `--dir`  ·  `serve` flags: `--port`  ·  `build` flags: `--output` `--pathprefix`
 
 ```bash
-bun run src/cli.ts init mysite --title "Ada Lovelace" --domain ada.dev
-cd mysite
-basepage serve          # http://localhost:8080 — edit src/ and watch it reload
+# scaffold a blank canvas, make it a blog, write a post, preview
+basepage init mysite --title "Field Notes" --yes
+basepage add blog mysite
+basepage new post "first ascent" --dir mysite
+basepage serve mysite          # http://localhost:8080 — edit src/ and watch it reload
 ```
 
 ## How it works
 
-A content **kind** = a template + a default feature manifest. Every project has a
-`basepage.json` declaring its kind and enabled features:
+Every project has a `basepage.json` declaring its kind and enabled features:
 
 ```json
-{ "kind": "site", "features": ["rss"] }
+{ "kind": "site", "features": ["blog", "rss"] }
 ```
 
 The scaffold is dependency-free. Basepage runs its **own** bundled Eleventy against the
-site folder and layers the manifest's opt-in plugins (RSS, syntax highlighting, …) in
-programmatically at build time — the scaffold never imports them. Adding a feature is a
-bundled plugin a kind can enable; adding a kind is a template plus a default manifest.
-Neither touches the core pipeline: scaffold → persist → generate → view → publish.
+site folder and injects the manifest's opt-in features at build time — the posts
+collection, date filters, the RSS feed, syntax highlighting, wikilinks/backlinks — so
+the scaffold never imports plugins. `basepage add <feature>` just flips a manifest flag
+(and drops in any presentation files); the build wiring is handled for you. The core
+pipeline stays fixed: scaffold → persist → generate → view → publish.
 
-### Templates (kinds)
+### Presets (`--template`)
 
-`basepage init` asks what you're building (or pass `--template`):
+`basepage init` defaults to **blank**. The interactive picker (or an agent reading your
+intent) chooses a richer starting point:
 
-- **default** — résumé homepage + a blog with an RSS feed. Light/dark via `:root` tokens.
-- **minimal** — a one-page card (name, tagline, links).
+- **blank** — one legible page, neutral tokenized CSS. The default canvas.
+- **personal** — a résumé-style homepage.
+- **blog** — posts + an RSS feed + a chronological index.
 - **wiki** — linked notes with `[[wikilinks]]` and automatic backlinks.
+
+Presets are deliberately understated **bones**, not finished looks — easy for the agent
+to restyle in any direction.
 
 ## Publishing
 

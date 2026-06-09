@@ -1,0 +1,57 @@
+/* A neutral, legible canvas. Restyle by editing these tokens, or ask your agent
+   to take it anywhere ("warmer", "like a terminal", "Swiss minimal"). */
+:root {
+  --font: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --bg: #ffffff;
+  --text: #111111;
+  --muted: #666666;
+  --accent: #1a56db;
+  --measure: 40rem;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #111111;
+    --text: #ededed;
+    --muted: #9a9a9a;
+    --accent: #7aa2f7;
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font);
+  font-size: 1.0625rem;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+
+.content {
+  max-width: var(--measure);
+  margin-inline: auto;
+  padding: clamp(2rem, 6vw, 4rem) 1.5rem;
+}
+
+h1 {
+  font-size: 2rem;
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+  margin: 0 0 0.5rem;
+}
+
+.lede {
+  font-size: 1.2rem;
+  color: var(--muted);
+  margin: 0 0 1.5rem;
+}
+
+a {
+  color: var(--accent);
+  text-underline-offset: 2px;
+}

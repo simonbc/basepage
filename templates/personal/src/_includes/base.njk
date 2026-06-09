@@ -11,10 +11,12 @@
   <body>
     <header class="site-header">
       <a class="brand" href="{{ '/' | url }}">{{ site.title }}</a>
+      {% if 'blog' in site.features %}
       <nav class="site-nav">
         <a href="{{ '/' | url }}">About</a>
         <a href="{{ '/blog/' | url }}">Writing</a>
       </nav>
+      {% endif %}
     </header>
 
     <main class="content">

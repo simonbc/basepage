@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{% if title %}{{ title }} · {% endif %}{{ site.title }}</title>
+    {% if description or site.tagline %}<meta name="description" content="{{ description or site.tagline }}" />{% endif %}
+    <link rel="stylesheet" href="{{ '/css/style.css' | url }}" />
+    {% if 'rss' in site.features %}<link rel="alternate" type="application/atom+xml" href="{{ '/feed.xml' | url }}" title="{{ site.title }} — feed" />{% endif %}
+  </head>
+  <body>
+    <header class="site-header">
+      <a class="brand" href="{{ '/' | url }}">{{ site.title }}</a>
+      {% if 'rss' in site.features %}<a class="feed-link" href="{{ '/feed.xml' | url }}">RSS</a>{% endif %}
+    </header>
+
+    <main class="content">
+      {{ content | safe }}
+    </main>
+
+    <footer class="site-footer">
+      <p>© {{ site.title }}{% if site.domain %} · <a href="https://{{ site.domain }}">{{ site.domain }}</a>{% endif %}</p>
+    </footer>
+  </body>
+</html>

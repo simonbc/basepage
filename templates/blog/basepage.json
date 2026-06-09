@@ -1,0 +1,8 @@
+{
+  "kind": "site",
+  "label": "Blog",
+  "description": "A chronological blog with posts and an RSS feed",
+  "features": ["blog", "rss"],
+  "title": "Your Blog",
+  "tagline": "Notes and essays."
+}

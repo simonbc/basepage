@@ -6,6 +6,8 @@ import { initSite } from "./commands/init.ts";
 import { serve } from "./commands/serve.ts";
 import { build, formatBytes } from "./commands/build.ts";
 import { publish, unpublish } from "./commands/publish.ts";
+import { newContent } from "./commands/new.ts";
+import { addFeature, KNOWN_FEATURES } from "./commands/add.ts";
 import { listTemplates, describeTemplates, resolveTemplateChoice } from "./lib/scaffold.ts";
 import type { Interface as ReadlineInterface } from "node:readline/promises";
 
@@ -61,7 +63,7 @@ async function cmdInit(positionals: string[], flags: Record<string, string | boo
     }
   }
 
-  const { dir: created, template: used } = initSite({ dir, template: template ?? "default", title, tagline, domain });
+  const { dir: created, template: used } = initSite({ dir, template: template ?? "blank", title, tagline, domain });
   const rel = relativeOrDot(created);
   console.log(`\n✓ Created a "${used}" basepage in ${rel}\n`);
   console.log("Next:");
@@ -130,6 +132,27 @@ async function cmdUnpublish(positionals: string[]) {
   console.log(removed ? `✓ Took ${repo} offline.` : `${repo} was not published.`);
 }
 
+async function cmdNew(positionals: string[], flags: Record<string, string | boolean>) {
+  const type = positionals[0];
+  const name = positionals[1];
+  if (type !== "page" && type !== "post") {
+    throw new Error("Usage: basepage new <page|post> <name>");
+  }
+  if (!name) throw new Error(`Usage: basepage new ${type} <name>`);
+  const dir = resolve(str(flags.dir) ?? ".");
+  const { path } = newContent({ siteDir: dir, type, name, title: str(flags.title) });
+  console.log(`✓ Created ${relativeOrDot(path)}`);
+}
+
+async function cmdAdd(positionals: string[]) {
+  const feature = positionals[0];
+  if (!feature) throw new Error(`Usage: basepage add <${KNOWN_FEATURES.join("|")}>`);
+  const dir = resolve(positionals[1] ?? ".");
+  const { added, createdFiles } = addFeature(dir, feature);
+  console.log(`✓ Enabled ${added.join(" + ")}`);
+  for (const f of createdFiles) console.log(`  + ${f}`);
+}
+
 function toTitle(slug: string): string {
   return slug.replace(/[-_]+/g, " ").trim().replace(/\b\w/g, (c) => c.toUpperCase()) || "My Basepage";
 }
@@ -143,13 +166,16 @@ function usage() {
   console.log(`basepage ${VERSION} — own your corner of the web, edited by your agent
 
 Usage:
-  basepage init [dir]      Scaffold a new site (interactive)
-  basepage serve [dir]     Live preview with reload on every edit
-  basepage build [dir]     Compile to _site/
-  basepage publish [dir]   Deploy to GitHub Pages (browser sign-in, no keys)
-  basepage unpublish [dir] Take the published site offline
+  basepage init [dir]        Scaffold a new site (interactive; blank canvas by default)
+  basepage new <page|post> <name>   Add a page or post
+  basepage add <feature>     Enable a feature (${KNOWN_FEATURES.join(", ")})
+  basepage serve [dir]       Live preview with reload on every edit
+  basepage build [dir]       Compile to _site/
+  basepage publish [dir]     Deploy to GitHub Pages (browser sign-in, no keys)
+  basepage unpublish [dir]   Take the published site offline
 
 init flags:   --template <${listTemplates().join("|")}>  --title <s>  --tagline <s>  --domain <s>  --yes
+new flags:    --title <s>  --dir <dir>
 serve flags:  --port <n>
 build flags:  --output <dir>  --pathprefix </repo/>
 `);
@@ -169,6 +195,10 @@ async function main() {
       return cmdServe(positionals, flags);
     case "build":
       return cmdBuild(positionals, flags);
+    case "new":
+      return cmdNew(positionals, flags);
+    case "add":
+      return cmdAdd(positionals);
     case "publish":
       return cmdPublish(positionals);
     case "unpublish":

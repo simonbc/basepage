@@ -1,8 +1,8 @@
 {
   "kind": "site",
   "label": "Personal site",
-  "description": "Résumé homepage + a blog with an RSS feed",
-  "features": ["rss"],
+  "description": "A résumé-style homepage — experience, projects, links",
+  "features": [],
   "title": "Your Name",
   "tagline": "A short line about who you are."
 }

@@ -14,7 +14,7 @@ function tmp() {
 
 test("writes a .nojekyll file and reports a file count", async () => {
   const dir = join(tmp(), "site");
-  initSite({ dir, template: "default", title: "Ada" });
+  initSite({ dir, template: "blog", title: "Ada" });
   const result = await build(dir);
   expect(existsSync(join(dir, "_site", ".nojekyll"))).toBe(true);
   expect(result.fileCount).toBeGreaterThan(0);
@@ -22,7 +22,7 @@ test("writes a .nojekyll file and reports a file count", async () => {
 
 test("cleans stale files from the output dir before building", async () => {
   const dir = join(tmp(), "site");
-  initSite({ dir, template: "minimal", title: "Card" });
+  initSite({ dir, template: "blank", title: "Card" });
 
   const out = join(dir, "_site");
   mkdirSync(out, { recursive: true });

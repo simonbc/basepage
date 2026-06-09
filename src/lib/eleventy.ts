@@ -47,6 +47,18 @@ export async function createEleventy(siteDir: string, opts: EleventyOptions = {}
 async function applyFeatures(cfg: any, manifest: Manifest): Promise<void> {
   const features = new Set(manifest.features);
 
+  if (features.has("blog")) {
+    // Blog machinery lives here (not in the scaffold config) so any kind can become
+    // a blog by flipping a manifest flag. Posts are markdown tagged "post".
+    cfg.addCollection("posts", (api: any) =>
+      api.getFilteredByTag("post").sort((a: any, b: any) => b.date - a.date),
+    );
+    cfg.addFilter("readableDate", (d: Date | string) =>
+      new Date(d).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" }),
+    );
+    cfg.addFilter("isoDate", (d: Date | string) => new Date(d).toISOString().slice(0, 10));
+  }
+
   if (features.has("syntax-highlight")) {
     const syntax = (await import("@11ty/eleventy-plugin-syntaxhighlight")).default;
     cfg.addPlugin(syntax);

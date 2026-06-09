@@ -9,7 +9,7 @@ export interface InitOptions extends ScaffoldMeta {
 /** Pure, non-interactive scaffolding — the testable core of `basepage init`. */
 export function initSite(opts: InitOptions): { dir: string; template: string } {
   const dir = resolve(opts.dir);
-  const template = opts.template ?? "default";
+  const template = opts.template ?? "blank";
   scaffold(dir, template, {
     title: opts.title ?? toTitle(basename(dir)),
     tagline: opts.tagline,
