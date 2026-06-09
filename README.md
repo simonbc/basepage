@@ -56,8 +56,11 @@ Neither touches the core pipeline: scaffold → persist → generate → view �
 
 ### Templates (kinds)
 
-- **default** — résumé + blog, with an RSS feed. Light/dark via `:root` tokens.
-- **minimal** — a one-page card.
+`basepage init` asks what you're building (or pass `--template`):
+
+- **default** — résumé homepage + a blog with an RSS feed. Light/dark via `:root` tokens.
+- **minimal** — a one-page card (name, tagline, links).
+- **wiki** — linked notes with `[[wikilinks]]` and automatic backlinks.
 
 ## Publishing
 

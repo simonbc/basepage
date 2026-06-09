@@ -1,0 +1,18 @@
+---
+layout: base.njk
+---
+<article class="note">
+  <h1>{{ title }}</h1>
+  {{ content | safe }}
+
+  {% if backlinks.length %}
+  <nav class="backlinks">
+    <h2>Linking here</h2>
+    <ul>
+      {% for link in backlinks %}
+      <li><a href="{{ link.url | url }}">{{ link.title }}</a></li>
+      {% endfor %}
+    </ul>
+  </nav>
+  {% endif %}
+</article>

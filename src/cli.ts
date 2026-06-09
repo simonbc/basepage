@@ -6,7 +6,8 @@ import { initSite } from "./commands/init.ts";
 import { serve } from "./commands/serve.ts";
 import { build, formatBytes } from "./commands/build.ts";
 import { publish, unpublish } from "./commands/publish.ts";
-import { listTemplates } from "./lib/scaffold.ts";
+import { listTemplates, describeTemplates, resolveTemplateChoice } from "./lib/scaffold.ts";
+import type { Interface as ReadlineInterface } from "node:readline/promises";
 
 const VERSION = "0.1.0";
 
@@ -38,9 +39,9 @@ const str = (v: string | boolean | undefined): string | undefined =>
 
 async function cmdInit(positionals: string[], flags: Record<string, string | boolean>) {
   const dir = resolve(positionals[0] ?? ".");
-  const template = str(flags.template) ?? "default";
   const interactive = stdin.isTTY && flags.yes !== true;
 
+  let template = str(flags.template);
   let title = str(flags.title);
   let tagline = str(flags.tagline);
   let domain = str(flags.domain);
@@ -48,8 +49,9 @@ async function cmdInit(positionals: string[], flags: Record<string, string | boo
   if (interactive) {
     const rl = createInterface({ input: stdin, output: stdout });
     try {
+      if (!template) template = await pickTemplate(rl);
       const defTitle = title ?? toTitle(basename(dir));
-      title = (await rl.question(`Site title (${defTitle}): `)).trim() || defTitle;
+      title = (await rl.question(`\nSite title (${defTitle}): `)).trim() || defTitle;
       tagline = (await rl.question(`Tagline${tagline ? ` (${tagline})` : ""}: `)).trim() || tagline;
       domain =
         (await rl.question(`Custom domain (optional)${domain ? ` (${domain})` : ""}: `)).trim() ||
@@ -59,13 +61,35 @@ async function cmdInit(positionals: string[], flags: Record<string, string | boo
     }
   }
 
-  const { dir: created } = initSite({ dir, template, title, tagline, domain });
+  const { dir: created, template: used } = initSite({ dir, template: template ?? "default", title, tagline, domain });
   const rel = relativeOrDot(created);
-  console.log(`\n✓ Created a "${template}" basepage in ${rel}\n`);
+  console.log(`\n✓ Created a "${used}" basepage in ${rel}\n`);
   console.log("Next:");
   if (rel !== ".") console.log(`  cd ${rel}`);
   console.log("  basepage serve     # live preview at http://localhost:8080");
   console.log("  …edit src/ and src/css/style.css — the browser reloads as you go\n");
+}
+
+/** Ask which kind of site to scaffold, looping until a valid choice. */
+async function pickTemplate(rl: ReadlineInterface): Promise<string> {
+  const choices = describeTemplates();
+  const names = choices.map((c) => c.name);
+
+  console.log("\nWhat are you building?");
+  choices.forEach((c, i) => {
+    console.log(`  ${i + 1}. ${c.label}${i === 0 ? "  (default)" : ""}\n     ${c.blurb}`);
+  });
+
+  while (true) {
+    const answer = await rl.question("\nChoose a number [1]: ");
+    const choice = resolveTemplateChoice(answer, names);
+    if (choice === "empty") return names[0];
+    if (choice === "invalid") {
+      console.log(`  Enter a number between 1 and ${names.length}.`);
+      continue;
+    }
+    return choice.name;
+  }
 }
 
 async function cmdServe(positionals: string[], flags: Record<string, string | boolean>) {

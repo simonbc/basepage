@@ -1,0 +1,25 @@
+---
+layout: base.njk
+---
+<section class="intro">
+  <h1>{{ site.title }}</h1>
+  <p class="lede">{{ site.tagline }}</p>
+</section>
+
+<section class="prose">
+  <p>
+    This is a wiki — a web of linked notes you own. Link one note from another with
+    double brackets: <code>[[Note title]]</code>. Basepage resolves the link and shows
+    a "Linking here" list of backlinks on each note automatically. Ask your agent to
+    "add a note about X and link it from Y."
+  </p>
+</section>
+
+<section>
+  <h2>All notes</h2>
+  <ul class="note-list">
+    {% for note in collections.notes %}
+    <li><a href="{{ note.url | url }}">{{ note.data.title }}</a></li>
+    {% endfor %}
+  </ul>
+</section>

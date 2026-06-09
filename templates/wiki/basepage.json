@@ -1,0 +1,8 @@
+{
+  "kind": "wiki",
+  "label": "Knowledge wiki",
+  "description": "Linked notes with [[wikilinks]] and automatic backlinks",
+  "features": ["wikilinks", "backlinks"],
+  "title": "Your Wiki",
+  "tagline": "A garden of linked notes."
+}

@@ -41,6 +41,9 @@ test("omits unset metadata keys rather than writing undefined", () => {
   initSite({ dir, template: "default", title: "Just A Title" });
   const raw = JSON.parse(readFileSync(join(dir, "basepage.json"), "utf8"));
   expect("domain" in raw).toBe(false);
+  // picker metadata must not leak into a real site's manifest
+  expect("label" in raw).toBe(false);
+  expect("description" in raw).toBe(false);
 });
 
 test("rejects an unknown template", () => {

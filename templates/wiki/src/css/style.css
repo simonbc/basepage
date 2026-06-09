@@ -1,0 +1,201 @@
+/* Design tokens — edit these to restyle the whole wiki. */
+:root {
+  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --font-mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
+
+  --bg: #fbfbfa;
+  --surface: #ffffff;
+  --text: #1c1b1a;
+  --muted: #6b6864;
+  --border: #e7e5e1;
+  --accent: #2f6f4f;
+  --accent-soft: #e4efe8;
+
+  --measure: 42rem;
+  --gap: clamp(1.5rem, 4vw, 3rem);
+  --radius: 10px;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #14130f;
+    --surface: #1c1b18;
+    --text: #ece9e3;
+    --muted: #9a958c;
+    --border: #2c2a25;
+    --accent: #6cc295;
+    --accent-soft: #1b271f;
+  }
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-sans);
+  font-size: 1.0625rem;
+  line-height: 1.65;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+/* Layout ------------------------------------------------------------------ */
+.site-header,
+.content,
+.site-footer {
+  width: 100%;
+  max-width: var(--measure);
+  margin-inline: auto;
+  padding-inline: 1.5rem;
+}
+
+.site-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+  padding-block: 2.25rem 1.5rem;
+  flex-wrap: wrap;
+}
+
+.brand {
+  font-weight: 650;
+  font-size: 1.05rem;
+  letter-spacing: -0.01em;
+  color: var(--text);
+  text-decoration: none;
+}
+
+.site-nav a {
+  color: var(--muted);
+  text-decoration: none;
+  font-size: 0.95rem;
+}
+.site-nav a:hover {
+  color: var(--accent);
+}
+
+.content {
+  flex: 1;
+  padding-block: 1.5rem 4rem;
+}
+
+.content > section + section {
+  margin-top: var(--gap);
+}
+
+/* Typography -------------------------------------------------------------- */
+h1,
+h2 {
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+  font-weight: 650;
+}
+
+.intro h1,
+.note h1 {
+  font-size: clamp(2rem, 6vw, 2.6rem);
+  margin: 0 0 0.5rem;
+}
+
+h2 {
+  font-size: 1.25rem;
+  margin: 0 0 0.85rem;
+}
+
+.lede {
+  font-size: 1.2rem;
+  color: var(--muted);
+  margin: 0;
+}
+
+.prose p,
+.note p {
+  max-width: var(--measure);
+}
+
+a {
+  color: var(--accent);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 2px;
+}
+
+/* Notes index ------------------------------------------------------------- */
+.note-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.note-list li {
+  padding-block: 0.55rem;
+  border-top: 1px solid var(--border);
+}
+.note-list li:first-child {
+  border-top: none;
+}
+.note-list a {
+  text-decoration: none;
+  font-weight: 500;
+  color: var(--text);
+}
+.note-list a:hover {
+  color: var(--accent);
+}
+
+/* A single note + its backlinks ------------------------------------------ */
+.note > p:first-of-type {
+  margin-top: 1.5rem;
+}
+
+.backlinks {
+  margin-top: 3rem;
+  padding: 1.1rem 1.25rem;
+  background: var(--accent-soft);
+  border-radius: var(--radius);
+}
+.backlinks h2 {
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+  margin: 0 0 0.5rem;
+}
+.backlinks ul {
+  margin: 0;
+  padding-left: 1.1rem;
+}
+.backlinks li {
+  margin-block: 0.15rem;
+}
+
+/* Code -------------------------------------------------------------------- */
+code {
+  font-family: var(--font-mono);
+  font-size: 0.9em;
+  background: var(--accent-soft);
+  padding: 0.15em 0.4em;
+  border-radius: 5px;
+}
+
+/* Footer ------------------------------------------------------------------ */
+.site-footer {
+  padding-block: 2rem 2.5rem;
+  border-top: 1px solid var(--border);
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+.site-footer p {
+  margin: 0;
+}
+.site-footer a {
+  color: var(--muted);
+}
