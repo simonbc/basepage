@@ -5,14 +5,16 @@ import { manifestPath, readManifest } from "../lib/manifest.ts";
 /** Individual features `basepage add` can enable. */
 export const KNOWN_FEATURES = ["blog", "rss", "wikilinks", "backlinks", "syntax-highlight"];
 
-/** Bundles enable several features + scaffold their presentation files. */
+// `add` enables a capability or section onto the current site — never a whole-site
+// kind (that's `init --template` or `restructure`). `wikilinks` is the capability
+// that makes a site a wiki: interlinking + backlinks + a notes section.
 const BUNDLES: Record<string, string[]> = {
   blog: ["blog", "rss"],
-  wiki: ["wikilinks", "backlinks"],
+  wikilinks: ["wikilinks", "backlinks"],
 };
 
 /** Everything you can pass to `basepage add`, for help/error text. */
-export const ADD_TARGETS = ["blog", "wiki", "rss", "wikilinks", "syntax-highlight"];
+export const ADD_TARGETS = ["blog", "wikilinks", "rss", "syntax-highlight"];
 
 export interface AddResult {
   target: string;
@@ -46,10 +48,8 @@ export function addFeature(siteDir: string, target: string): AddResult {
 
   const createdFiles: string[] = [];
   if (target === "blog") createdFiles.push(...ensureBlogScaffold(dir));
-  if (target === "wiki") {
-    createdFiles.push(...ensureWikiScaffold(dir));
-    raw.kind = "wiki";
-  }
+  // Enabling wikilinks brings the notes section so the capability is usable.
+  if (target === "wikilinks" || target === "backlinks") createdFiles.push(...ensureWikiScaffold(dir));
 
   raw.features = [...features];
   writeFileSync(file, JSON.stringify(raw, null, 2) + "\n");
@@ -58,7 +58,7 @@ export function addFeature(siteDir: string, target: string): AddResult {
 }
 
 /** Create the blog's presentation files if they're missing. Non-destructive. */
-function ensureBlogScaffold(dir: string): string[] {
+export function ensureBlogScaffold(dir: string): string[] {
   const created: string[] = [];
   const write = (rel: string, content: string) => {
     const abs = join(dir, rel);
@@ -75,7 +75,7 @@ function ensureBlogScaffold(dir: string): string[] {
 }
 
 /** Create the wiki's presentation files if they're missing. Non-destructive. */
-function ensureWikiScaffold(dir: string): string[] {
+export function ensureWikiScaffold(dir: string): string[] {
   const created: string[] = [];
   const write = (rel: string, content: string) => {
     const abs = join(dir, rel);

@@ -8,6 +8,7 @@ import { build, formatBytes } from "./commands/build.ts";
 import { publish, unpublish } from "./commands/publish.ts";
 import { newContent } from "./commands/new.ts";
 import { addFeature, ADD_TARGETS } from "./commands/add.ts";
+import { restructure } from "./commands/restructure.ts";
 import { listTemplates, describeTemplates, resolveTemplateChoice } from "./lib/scaffold.ts";
 import type { Interface as ReadlineInterface } from "node:readline/promises";
 
@@ -153,6 +154,15 @@ async function cmdAdd(positionals: string[]) {
   for (const f of createdFiles) console.log(`  + ${f}`);
 }
 
+async function cmdRestructure(positionals: string[]) {
+  const kind = positionals[0];
+  if (!kind) throw new Error("Usage: basepage restructure <blank|personal|blog|wiki>");
+  const dir = resolve(positionals[1] ?? ".");
+  const { createdFiles } = restructure(dir, kind);
+  console.log(`✓ Restructured as a ${kind}`);
+  for (const f of createdFiles) console.log(`  + ${f}`);
+}
+
 function toTitle(slug: string): string {
   return slug.replace(/[-_]+/g, " ").trim().replace(/\b\w/g, (c) => c.toUpperCase()) || "My Basepage";
 }
@@ -168,7 +178,8 @@ function usage() {
 Usage:
   basepage init [dir]        Scaffold a new site (interactive; blank canvas by default)
   basepage new <page|post|note> <name>   Add a page, post, or note
-  basepage add <target>      Enable a feature/bundle (${ADD_TARGETS.join(", ")})
+  basepage add <capability>  Enable a capability/section (${ADD_TARGETS.join(", ")})
+  basepage restructure <kind>   Change the site's structure (blank|personal|blog|wiki)
   basepage serve [dir]       Live preview with reload on every edit
   basepage build [dir]       Compile to _site/
   basepage publish [dir]     Deploy to GitHub Pages (browser sign-in, no keys)
@@ -199,6 +210,8 @@ async function main() {
       return cmdNew(positionals, flags);
     case "add":
       return cmdAdd(positionals);
+    case "restructure":
+      return cmdRestructure(positionals);
     case "publish":
       return cmdPublish(positionals);
     case "unpublish":

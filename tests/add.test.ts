@@ -49,12 +49,12 @@ test("add preserves existing manifest fields and is idempotent", () => {
   expect(m.features.filter((f) => f === "syntax-highlight")).toHaveLength(1);
 });
 
-test("add wiki turns a blank site into a wiki: kind, features, scaffold files", () => {
+test("add wikilinks enables the wiki capability + notes scaffold (kind unchanged)", () => {
   const dir = site("blank");
-  const result = addFeature(dir, "wiki");
+  const result = addFeature(dir, "wikilinks");
 
   const m = readManifest(dir);
-  expect(m.kind).toBe("wiki");
+  expect(m.kind).toBe("site"); // `add` is a capability, not a kind change
   expect(m.features).toContain("wikilinks");
   expect(m.features).toContain("backlinks");
   expect(result.added).toEqual(["wikilinks", "backlinks"]);
@@ -63,9 +63,9 @@ test("add wiki turns a blank site into a wiki: kind, features, scaffold files", 
   expect(existsSync(join(dir, "src", "_includes", "note.njk"))).toBe(true);
 });
 
-test("a blank site, made a wiki, resolves wikilinks and renders backlinks", async () => {
+test("a blank site, given wikilinks, resolves wikilinks and renders backlinks", async () => {
   const dir = site("blank");
-  addFeature(dir, "wiki");
+  addFeature(dir, "wikilinks");
   newContent({ siteDir: dir, type: "note", name: "Alpha", title: "Alpha" });
   // Beta links to Alpha, so Alpha should get a backlink from Beta.
   const { path: beta } = newContent({ siteDir: dir, type: "note", name: "Beta", title: "Beta" });

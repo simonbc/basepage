@@ -44,9 +44,9 @@ test("new post on a blog writes a dated file with title + date", () => {
   expect(body).toMatch(/date: 2026-03-04/);
 });
 
-test("new note requires a wiki, with a helpful error", () => {
+test("new note requires the wiki capability, with a helpful error", () => {
   const dir = site("blank");
-  expect(() => newContent({ siteDir: dir, type: "note", name: "idea" })).toThrow(/add wiki/i);
+  expect(() => newContent({ siteDir: dir, type: "note", name: "idea" })).toThrow(/add wikilinks/i);
 });
 
 test("new note on a wiki writes into src/notes with a title", () => {

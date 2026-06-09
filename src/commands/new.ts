@@ -62,7 +62,7 @@ export function newContent(opts: NewOptions): NewResult {
   if (opts.type === "note") {
     const notesDir = join(dir, "src", "notes");
     if (!existsSync(join(notesDir, "notes.json"))) {
-      throw new Error("This site isn't a wiki yet. Run `basepage add wiki` first.");
+      throw new Error("This site isn't a wiki yet. Run `basepage add wikilinks` first.");
     }
     const file = join(notesDir, `${slug}.md`);
     if (existsSync(file)) throw new Error(`Already exists: src/notes/${slug}.md`);

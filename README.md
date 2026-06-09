@@ -39,9 +39,10 @@ bun run src/cli.ts <command>     # or, once linked: basepage <command>
 
 | Command | What it does |
 | --- | --- |
-| `basepage init [dir]` | Scaffold a new site (interactive; blank canvas by default). |
-| `basepage new <page\|post> <name>` | Add a standalone page, or a blog post. |
-| `basepage add <feature>` | Enable a feature (blog, rss, wikilinks, syntax-highlight). |
+| `basepage init [dir]` | Scaffold a new site with a structure (blank canvas by default). |
+| `basepage new <page\|post\|note> <name>` | Add content. |
+| `basepage add <capability>` | Enable a capability/section (blog, wikilinks, rss, syntax-highlight). |
+| `basepage restructure <kind>` | Change an existing site's structure (blank\|personal\|blog\|wiki). |
 | `basepage serve [dir]` | Live preview with reload on every content/CSS edit. |
 | `basepage build [dir]` | Compile to `_site/`. |
 | `basepage publish [dir]` | Deploy to GitHub Pages. |
