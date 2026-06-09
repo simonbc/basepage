@@ -44,6 +44,18 @@ test("new post on a blog writes a dated file with title + date", () => {
   expect(body).toMatch(/date: 2026-03-04/);
 });
 
+test("new note requires a wiki, with a helpful error", () => {
+  const dir = site("blank");
+  expect(() => newContent({ siteDir: dir, type: "note", name: "idea" })).toThrow(/add wiki/i);
+});
+
+test("new note on a wiki writes into src/notes with a title", () => {
+  const dir = site("wiki");
+  const { path } = newContent({ siteDir: dir, type: "note", name: "My Idea" });
+  expect(path).toBe(join(dir, "src", "notes", "my-idea.md"));
+  expect(readFileSync(path, "utf8")).toMatch(/title: My Idea/);
+});
+
 test("refuses to overwrite an existing file", () => {
   const dir = site("blank");
   newContent({ siteDir: dir, type: "page", name: "about" });

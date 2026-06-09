@@ -1,5 +1,5 @@
 import { test, expect, afterEach } from "bun:test";
-import { mkdtempSync, existsSync, readFileSync } from "node:fs";
+import { mkdtempSync, existsSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { initSite } from "../src/commands/init.ts";
@@ -49,7 +49,39 @@ test("add preserves existing manifest fields and is idempotent", () => {
   expect(m.features.filter((f) => f === "syntax-highlight")).toHaveLength(1);
 });
 
+test("add wiki turns a blank site into a wiki: kind, features, scaffold files", () => {
+  const dir = site("blank");
+  const result = addFeature(dir, "wiki");
+
+  const m = readManifest(dir);
+  expect(m.kind).toBe("wiki");
+  expect(m.features).toContain("wikilinks");
+  expect(m.features).toContain("backlinks");
+  expect(result.added).toEqual(["wikilinks", "backlinks"]);
+
+  expect(existsSync(join(dir, "src", "notes", "notes.json"))).toBe(true);
+  expect(existsSync(join(dir, "src", "_includes", "note.njk"))).toBe(true);
+});
+
+test("a blank site, made a wiki, resolves wikilinks and renders backlinks", async () => {
+  const dir = site("blank");
+  addFeature(dir, "wiki");
+  newContent({ siteDir: dir, type: "note", name: "Alpha", title: "Alpha" });
+  // Beta links to Alpha, so Alpha should get a backlink from Beta.
+  const { path: beta } = newContent({ siteDir: dir, type: "note", name: "Beta", title: "Beta" });
+  writeFileSync(beta, "---\ntitle: Beta\n---\n\nSee [[Alpha]] for details.\n");
+
+  await build(dir);
+  const alpha = readFileSync(join(dir, "_site", "notes", "alpha", "index.html"), "utf8");
+  const betaHtml = readFileSync(join(dir, "_site", "notes", "beta", "index.html"), "utf8");
+  // Beta's wikilink resolved to Alpha's page
+  expect(betaHtml).toContain('href="/notes/alpha/"');
+  // Alpha shows a backlink from Beta
+  expect(alpha).toContain("Linking here");
+  expect(alpha).toContain('href="/notes/beta/"');
+});
+
 test("rejects an unknown feature", () => {
   const dir = site("blank");
-  expect(() => addFeature(dir, "telepathy")).toThrow(/unknown feature/i);
+  expect(() => addFeature(dir, "telepathy")).toThrow(/unknown/i);
 });

@@ -2,9 +2,11 @@ import { existsSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { readManifest } from "../lib/manifest.ts";
 
+export type NewType = "page" | "post" | "note";
+
 export interface NewOptions {
   siteDir: string;
-  type: "page" | "post";
+  type: NewType;
   name: string;
   title?: string;
   /** Post date; defaults to today. */
@@ -13,7 +15,7 @@ export interface NewOptions {
 
 export interface NewResult {
   path: string;
-  type: "page" | "post";
+  type: NewType;
 }
 
 /** "About Me" → "about-me". */
@@ -57,7 +59,18 @@ export function newContent(opts: NewOptions): NewResult {
     return { path: file, type: "post" };
   }
 
-  throw new Error(`Unknown type "${opts.type}". Use "page" or "post".`);
+  if (opts.type === "note") {
+    const notesDir = join(dir, "src", "notes");
+    if (!existsSync(join(notesDir, "notes.json"))) {
+      throw new Error("This site isn't a wiki yet. Run `basepage add wiki` first.");
+    }
+    const file = join(notesDir, `${slug}.md`);
+    if (existsSync(file)) throw new Error(`Already exists: src/notes/${slug}.md`);
+    writeFileSync(file, noteScaffold(title));
+    return { path: file, type: "note" };
+  }
+
+  throw new Error(`Unknown type "${opts.type}". Use "page", "post", or "note".`);
 }
 
 function pageScaffold(title: string): string {
@@ -79,5 +92,14 @@ date: ${date}
 ---
 
 Write your post.
+`;
+}
+
+function noteScaffold(title: string): string {
+  return `---
+title: ${title}
+---
+
+Write your note. Link other notes with [[Note title]].
 `;
 }

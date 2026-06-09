@@ -78,6 +78,13 @@ async function applyFeatures(cfg: any, manifest: Manifest): Promise<void> {
   if (features.has("wikilinks") || features.has("backlinks")) {
     const interlinker = (await import("@photogabble/eleventy-plugin-interlinker")).default;
     cfg.addPlugin(interlinker, { defaultLayout: undefined });
+    // Notes collection lives here (not in the scaffold config) so any kind can
+    // become a wiki by flipping a manifest flag. Notes are markdown tagged "note".
+    cfg.addCollection("notes", (api: any) =>
+      api
+        .getFilteredByTag("note")
+        .sort((a: any, b: any) => (a.data.title || "").localeCompare(b.data.title || "")),
+    );
   }
 }
 

@@ -30,11 +30,16 @@ The split:
    ```
    basepage init <dir> --template <preset> --title "<title>" --yes
    ```
-2. **Add structure** the preset doesn't already have:
+2. **Add structure** the preset doesn't already have. To change or extend an
+   **existing** project, always use `add`/`new` — never re-init a non-empty
+   directory (init refuses, and copying a fresh scaffold over the top risks
+   clobbering real content).
    - `basepage add blog` — turn any site into a blog (posts + RSS feed).
+   - `basepage add wiki` — turn any site into a wiki (`[[wikilinks]]` + backlinks).
    - `basepage new post <slug>` — start a post (blog only).
+   - `basepage new note <slug>` — start a note (wiki only).
    - `basepage new page <slug>` — add a standalone page.
-   - `basepage add <rss|wikilinks|syntax-highlight>` — enable a feature.
+   - `basepage add <rss|wikilinks|syntax-highlight>` — enable a single feature.
 3. **Design + write.** Edit `src/css/style.css` (start at the `:root` tokens) and the
    templates in `src/_includes/`. Write real copy into the markdown/`.njk` files. Take
    the look wherever the user asked.
@@ -54,7 +59,8 @@ The split:
 | a landing page, "just a page", or anything that doesn't fit above | `blank` |
 
 When unsure, start from `blank` and build up with `add`/`new` — a clean canvas is
-easier to shape than undoing a preset's opinions.
+easier to shape than undoing a preset's opinions. If the project **already exists**,
+don't pick a preset at all: evolve it with `basepage add blog` / `add wiki`.
 
 ## Project layout
 

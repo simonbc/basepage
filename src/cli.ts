@@ -7,7 +7,7 @@ import { serve } from "./commands/serve.ts";
 import { build, formatBytes } from "./commands/build.ts";
 import { publish, unpublish } from "./commands/publish.ts";
 import { newContent } from "./commands/new.ts";
-import { addFeature, KNOWN_FEATURES } from "./commands/add.ts";
+import { addFeature, ADD_TARGETS } from "./commands/add.ts";
 import { listTemplates, describeTemplates, resolveTemplateChoice } from "./lib/scaffold.ts";
 import type { Interface as ReadlineInterface } from "node:readline/promises";
 
@@ -135,8 +135,8 @@ async function cmdUnpublish(positionals: string[]) {
 async function cmdNew(positionals: string[], flags: Record<string, string | boolean>) {
   const type = positionals[0];
   const name = positionals[1];
-  if (type !== "page" && type !== "post") {
-    throw new Error("Usage: basepage new <page|post> <name>");
+  if (type !== "page" && type !== "post" && type !== "note") {
+    throw new Error("Usage: basepage new <page|post|note> <name>");
   }
   if (!name) throw new Error(`Usage: basepage new ${type} <name>`);
   const dir = resolve(str(flags.dir) ?? ".");
@@ -145,10 +145,10 @@ async function cmdNew(positionals: string[], flags: Record<string, string | bool
 }
 
 async function cmdAdd(positionals: string[]) {
-  const feature = positionals[0];
-  if (!feature) throw new Error(`Usage: basepage add <${KNOWN_FEATURES.join("|")}>`);
+  const target = positionals[0];
+  if (!target) throw new Error(`Usage: basepage add <${ADD_TARGETS.join("|")}>`);
   const dir = resolve(positionals[1] ?? ".");
-  const { added, createdFiles } = addFeature(dir, feature);
+  const { added, createdFiles } = addFeature(dir, target);
   console.log(`✓ Enabled ${added.join(" + ")}`);
   for (const f of createdFiles) console.log(`  + ${f}`);
 }
@@ -167,8 +167,8 @@ function usage() {
 
 Usage:
   basepage init [dir]        Scaffold a new site (interactive; blank canvas by default)
-  basepage new <page|post> <name>   Add a page or post
-  basepage add <feature>     Enable a feature (${KNOWN_FEATURES.join(", ")})
+  basepage new <page|post|note> <name>   Add a page, post, or note
+  basepage add <target>      Enable a feature/bundle (${ADD_TARGETS.join(", ")})
   basepage serve [dir]       Live preview with reload on every edit
   basepage build [dir]       Compile to _site/
   basepage publish [dir]     Deploy to GitHub Pages (browser sign-in, no keys)

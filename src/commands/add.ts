@@ -2,28 +2,38 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join, relative, resolve } from "node:path";
 import { manifestPath, readManifest } from "../lib/manifest.ts";
 
-/** Features `basepage add` can enable. */
+/** Individual features `basepage add` can enable. */
 export const KNOWN_FEATURES = ["blog", "rss", "wikilinks", "backlinks", "syntax-highlight"];
 
+/** Bundles enable several features + scaffold their presentation files. */
+const BUNDLES: Record<string, string[]> = {
+  blog: ["blog", "rss"],
+  wiki: ["wikilinks", "backlinks"],
+};
+
+/** Everything you can pass to `basepage add`, for help/error text. */
+export const ADD_TARGETS = ["blog", "wiki", "rss", "wikilinks", "syntax-highlight"];
+
 export interface AddResult {
-  feature: string;
-  /** Features actually enabled (some bundle, e.g. blog → blog + rss). */
+  target: string;
+  /** Features actually enabled (a bundle expands, e.g. blog → blog + rss). */
   added: string[];
   /** Scaffold files created (paths relative to the site dir). */
   createdFiles: string[];
 }
 
 /**
- * Enable a feature: flip the manifest flag(s) and drop in any presentation files
- * the feature needs. Build-time logic (collections, filters, plugins, feeds) is
- * injected by Basepage from the manifest — see lib/eleventy.ts.
+ * Enable a feature or bundle: flip the manifest flag(s) and drop in any
+ * presentation files needed. Build-time logic (collections, filters, plugins,
+ * feeds) is injected by Basepage from the manifest — see lib/eleventy.ts.
  */
-export function addFeature(siteDir: string, feature: string): AddResult {
+export function addFeature(siteDir: string, target: string): AddResult {
   const dir = resolve(siteDir);
   readManifest(dir); // validate it's a Basepage project
 
-  if (!KNOWN_FEATURES.includes(feature)) {
-    throw new Error(`Unknown feature "${feature}". Known: ${KNOWN_FEATURES.join(", ")}`);
+  const isBundle = target in BUNDLES;
+  if (!isBundle && !KNOWN_FEATURES.includes(target)) {
+    throw new Error(`Unknown target "${target}". Try: ${ADD_TARGETS.join(", ")}`);
   }
 
   // Read the raw manifest so we preserve any keys we don't model.
@@ -31,16 +41,20 @@ export function addFeature(siteDir: string, feature: string): AddResult {
   const raw = JSON.parse(readFileSync(file, "utf8"));
   const features = new Set<string>(Array.isArray(raw.features) ? raw.features : []);
 
-  const added = feature === "blog" ? ["blog", "rss"] : [feature];
+  const added = BUNDLES[target] ?? [target];
   for (const f of added) features.add(f);
 
   const createdFiles: string[] = [];
-  if (feature === "blog") createdFiles.push(...ensureBlogScaffold(dir));
+  if (target === "blog") createdFiles.push(...ensureBlogScaffold(dir));
+  if (target === "wiki") {
+    createdFiles.push(...ensureWikiScaffold(dir));
+    raw.kind = "wiki";
+  }
 
   raw.features = [...features];
   writeFileSync(file, JSON.stringify(raw, null, 2) + "\n");
 
-  return { feature, added, createdFiles };
+  return { target, added, createdFiles };
 }
 
 /** Create the blog's presentation files if they're missing. Non-destructive. */
@@ -57,6 +71,23 @@ function ensureBlogScaffold(dir: string): string[] {
   write("src/posts/posts.json", `{\n  "layout": "post.njk",\n  "tags": "post"\n}\n`);
   write("src/_includes/post.njk", POST_LAYOUT);
   write("src/blog.njk", BLOG_INDEX);
+  return created;
+}
+
+/** Create the wiki's presentation files if they're missing. Non-destructive. */
+function ensureWikiScaffold(dir: string): string[] {
+  const created: string[] = [];
+  const write = (rel: string, content: string) => {
+    const abs = join(dir, rel);
+    if (existsSync(abs)) return;
+    mkdirSync(join(abs, ".."), { recursive: true });
+    writeFileSync(abs, content);
+    created.push(relative(dir, abs));
+  };
+
+  write("src/notes/notes.json", `{\n  "layout": "note.njk",\n  "tags": "note"\n}\n`);
+  write("src/_includes/note.njk", NOTE_LAYOUT);
+  write("src/notes.njk", NOTES_INDEX);
   return created;
 }
 
@@ -88,5 +119,42 @@ permalink: /blog/
 </ul>
 {% else %}
 <p>No posts yet. Run <code>basepage new post &lt;slug&gt;</code> to write one.</p>
+{% endif %}
+`;
+
+const NOTE_LAYOUT = `---
+layout: base.njk
+---
+<article class="note">
+  <h1>{{ title }}</h1>
+  {{ content | safe }}
+
+  {% if backlinks.length %}
+  <nav class="backlinks">
+    <h2>Linking here</h2>
+    <ul>
+      {% for link in backlinks %}
+      <li><a href="{{ link.url | url }}">{{ link.title }}</a></li>
+      {% endfor %}
+    </ul>
+  </nav>
+  {% endif %}
+</article>
+`;
+
+const NOTES_INDEX = `---
+layout: base.njk
+title: Notes
+permalink: /notes/
+---
+<h1>Notes</h1>
+{% if collections.notes | length %}
+<ul class="note-list">
+  {% for note in collections.notes %}
+  <li><a href="{{ note.url | url }}">{{ note.data.title }}</a></li>
+  {% endfor %}
+</ul>
+{% else %}
+<p>No notes yet. Run <code>basepage new note &lt;slug&gt;</code> to write one.</p>
 {% endif %}
 `;
