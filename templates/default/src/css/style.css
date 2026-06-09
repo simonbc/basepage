@@ -1,0 +1,266 @@
+/* Design tokens — edit these to restyle the whole site. Ask your agent things
+   like "make it warmer" or "restyle it like the Twenty Twenty-Five theme". */
+:root {
+  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --font-serif: ui-serif, Georgia, Cambria, "Times New Roman", serif;
+  --font-mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
+
+  --bg: #fbfbfa;
+  --surface: #ffffff;
+  --text: #1c1b1a;
+  --muted: #6b6864;
+  --border: #e7e5e1;
+  --accent: #b5460f;
+  --accent-soft: #f3e6df;
+
+  --measure: 42rem;
+  --gap: clamp(1.5rem, 4vw, 3rem);
+  --radius: 10px;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #14130f;
+    --surface: #1c1b18;
+    --text: #ece9e3;
+    --muted: #9a958c;
+    --border: #2c2a25;
+    --accent: #f08a4b;
+    --accent-soft: #2a211a;
+  }
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-sans);
+  font-size: 1.0625rem;
+  line-height: 1.65;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+/* Layout ------------------------------------------------------------------ */
+.site-header,
+.content,
+.site-footer {
+  width: 100%;
+  max-width: var(--measure);
+  margin-inline: auto;
+  padding-inline: 1.5rem;
+}
+
+.site-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+  padding-block: 2.25rem 1.5rem;
+  flex-wrap: wrap;
+}
+
+.brand {
+  font-weight: 650;
+  font-size: 1.05rem;
+  letter-spacing: -0.01em;
+  color: var(--text);
+  text-decoration: none;
+}
+
+.site-nav {
+  display: flex;
+  gap: 1.25rem;
+  font-size: 0.95rem;
+}
+
+.site-nav a {
+  color: var(--muted);
+  text-decoration: none;
+}
+.site-nav a:hover {
+  color: var(--accent);
+}
+
+.content {
+  flex: 1;
+  padding-block: 1.5rem 4rem;
+}
+
+.content > section + section {
+  margin-top: var(--gap);
+}
+
+/* Typography -------------------------------------------------------------- */
+h1,
+h2,
+h3 {
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+  font-weight: 650;
+}
+
+.intro h1,
+.post-header h1 {
+  font-size: clamp(2rem, 6vw, 2.75rem);
+  margin: 0 0 0.5rem;
+}
+
+h2 {
+  font-size: 1.3rem;
+  margin: 0 0 0.85rem;
+}
+
+.lede {
+  font-size: 1.2rem;
+  color: var(--muted);
+  margin: 0;
+}
+
+.prose p,
+.post p {
+  max-width: var(--measure);
+}
+
+a {
+  color: var(--accent);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 2px;
+}
+
+/* Résumé bits ------------------------------------------------------------- */
+.timeline,
+.cards,
+.post-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.timeline li {
+  display: grid;
+  grid-template-columns: 8rem 1fr;
+  gap: 0.25rem 1.25rem;
+  padding-block: 0.6rem;
+  border-top: 1px solid var(--border);
+}
+.timeline li:first-child {
+  border-top: none;
+}
+.timeline-when {
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+  font-size: 0.95rem;
+}
+
+.cards {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+}
+.cards li {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.1rem 1.25rem;
+}
+.cards li a {
+  text-decoration: none;
+}
+.cards li p {
+  margin: 0.4rem 0 0;
+  color: var(--muted);
+  font-size: 0.95rem;
+}
+
+.links a {
+  white-space: nowrap;
+}
+
+/* Writing list + posts ---------------------------------------------------- */
+.post-list li {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+  padding-block: 0.7rem;
+  border-top: 1px solid var(--border);
+}
+.post-list li:first-child {
+  border-top: none;
+}
+.post-list a {
+  text-decoration: none;
+  font-weight: 500;
+  color: var(--text);
+}
+.post-list a:hover {
+  color: var(--accent);
+}
+.post-list time {
+  color: var(--muted);
+  font-size: 0.9rem;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.post-meta {
+  color: var(--muted);
+  margin: 0 0 2rem;
+}
+.post h2 {
+  margin-top: 2rem;
+}
+.post-back {
+  margin-top: 3rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--border);
+  font-size: 0.95rem;
+}
+
+/* Code -------------------------------------------------------------------- */
+code,
+pre {
+  font-family: var(--font-mono);
+  font-size: 0.9em;
+}
+:not(pre) > code {
+  background: var(--accent-soft);
+  padding: 0.15em 0.4em;
+  border-radius: 5px;
+}
+pre {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1rem 1.1rem;
+  overflow-x: auto;
+  line-height: 1.5;
+}
+
+/* Footer ------------------------------------------------------------------ */
+.site-footer {
+  padding-block: 2rem 2.5rem;
+  border-top: 1px solid var(--border);
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+.site-footer p {
+  margin: 0;
+}
+.site-footer a {
+  color: var(--muted);
+}

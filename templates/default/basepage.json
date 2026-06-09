@@ -1,0 +1,6 @@
+{
+  "kind": "site",
+  "features": ["rss"],
+  "title": "Your Name",
+  "tagline": "A short line about who you are."
+}

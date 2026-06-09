@@ -1,0 +1,6 @@
+node_modules/
+_site/
+.context/
+.gstack/
+*.log
+.DS_Store

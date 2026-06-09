@@ -1,0 +1,22 @@
+---
+layout: base.njk
+title: Writing
+permalink: /blog/
+---
+<section class="intro">
+  <h1>Writing</h1>
+  <p class="lede">Notes, essays, and things worth keeping.</p>
+</section>
+
+{% if collections.posts | length %}
+<ul class="post-list">
+  {% for post in collections.posts %}
+  <li>
+    <a href="{{ post.url | url }}">{{ post.data.title }}</a>
+    <time datetime="{{ post.date | isoDate }}">{{ post.date | readableDate }}</time>
+  </li>
+  {% endfor %}
+</ul>
+{% else %}
+<p class="prose">Nothing here yet. Run <code>basepage new post</code> to start.</p>
+{% endif %}
