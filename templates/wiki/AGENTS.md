@@ -38,6 +38,6 @@ project page at `/<repo>/`) will break those in-content links — set a `domain`
 
 ## Commands (run by the human)
 
-- `basepage serve` — live preview at http://localhost:8080
+- `basepage serve` — live preview at http://localhost:8080 with local Edit links for markdown files
 - `basepage build` — compile to `_site/`
 - `basepage publish` — deploy to their domain

@@ -53,7 +53,8 @@ sections and **`new`** content onto it. Three verbs, three jobs — don't confus
    templates in `src/_includes/`. Write real copy into the markdown/`.njk` files. Take
    the look wherever the user asked.
 4. **Preview.** `basepage serve` (http://localhost:8080) — edits to content and CSS
-   live-reload. Use this to check your work.
+   live-reload. Serve mode also injects local-only `Edit` links that open a same-port
+   editor for existing markdown pages/posts/notes. Use this to check your work.
 5. **Publish** when the user approves: `basepage publish` (browser sign-in, no API
    keys — it reuses the GitHub CLI login if present). Set a `domain` in `basepage.json`
    first for a custom domain.
@@ -105,3 +106,7 @@ src/
   domain or runs locally; set a `domain` before publishing a wiki (a no-domain GitHub
   project sub-path would break in-content wikilinks).
 - Publish is human-gated: preview with `serve`, get the user's OK, then `publish`.
+- Browser editing is local-only: `serve` injects the links and handles `/__edit` +
+  `/__save`; `build`/`publish` output stays plain static files. Saves are guarded to
+  existing `.md` files under the site's `src/` directory, so templates like
+  `src/index.njk` are not browser-editable.

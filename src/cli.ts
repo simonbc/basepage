@@ -180,7 +180,7 @@ Usage:
   basepage new <page|post|note> <name>   Add a page, post, or note
   basepage add <capability>  Enable a capability/section (${ADD_TARGETS.join(", ")})
   basepage restructure <kind>   Change the site's structure (blank|personal|blog|wiki)
-  basepage serve [dir]       Live preview with reload on every edit
+  basepage serve [dir]       Live preview with reload + local edit links
   basepage build [dir]       Compile to _site/
   basepage publish [dir]     Deploy to GitHub Pages (browser sign-in, no keys)
   basepage unpublish [dir]   Take the published site offline

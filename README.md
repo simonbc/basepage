@@ -43,7 +43,7 @@ bun run src/cli.ts <command>     # or, once linked: basepage <command>
 | `basepage new <page\|post\|note> <name>` | Add content. |
 | `basepage add <capability>` | Enable a capability/section (blog, wikilinks, rss, syntax-highlight). |
 | `basepage restructure <kind>` | Change an existing site's structure (blank\|personal\|blog\|wiki). |
-| `basepage serve [dir]` | Live preview with reload on every content/CSS edit. |
+| `basepage serve [dir]` | Live preview with reload and browser edit links for markdown files. |
 | `basepage build [dir]` | Compile to `_site/`. |
 | `basepage publish [dir]` | Deploy to GitHub Pages. |
 | `basepage unpublish [dir]` | Take the published site offline. |
@@ -56,7 +56,7 @@ bun run src/cli.ts <command>     # or, once linked: basepage <command>
 basepage init mysite --title "Field Notes" --yes
 basepage add blog mysite
 basepage new post "first ascent" --dir mysite
-basepage serve mysite          # http://localhost:8080 — edit src/ and watch it reload
+basepage serve mysite          # http://localhost:8080 — edit in the browser or in src/
 ```
 
 ## How it works
@@ -73,6 +73,19 @@ collection, date filters, the RSS feed, syntax highlighting, wikilinks/backlinks
 the scaffold never imports plugins. `basepage add <feature>` just flips a manifest flag
 (and drops in any presentation files); the build wiring is handled for you. The core
 pipeline stays fixed: scaffold → persist → generate → view → publish.
+
+### Local editing
+
+`basepage serve` is also a tiny local editor. In serve mode only, Basepage injects an
+`Edit` link into every generated HTML page backed by a markdown source file under
+`src/`. The link opens a same-port editor at `/__edit` with a title field and markdown
+body. Saving submits to `/__save`, updates the source file, preserves all other front
+matter, and lets Eleventy's watcher rebuild the preview immediately. Template-backed
+pages like `src/index.njk` are not browser-editable.
+
+The editor is never written into `basepage build` output, so published GitHub Pages
+sites stay plain static files. Saves are path-guarded and only existing `.md` files
+inside the site's `src/` directory can be written.
 
 ### Presets (`--template`)
 

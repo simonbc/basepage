@@ -32,6 +32,6 @@ src/
 ## Commands (run by the human, or by you on their behalf)
 
 - `basepage new post <slug>` — start a new post
-- `basepage serve` — live preview at http://localhost:8080
+- `basepage serve` — live preview at http://localhost:8080 with local Edit links for markdown files
 - `basepage build` — compile to `_site/`
 - `basepage publish` — deploy to GitHub Pages

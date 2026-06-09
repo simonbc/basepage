@@ -1,5 +1,6 @@
 import Eleventy from "@11ty/eleventy";
 import { resolve } from "node:path";
+import { createDevEditorMiddleware, injectEditLink } from "./dev-editor.ts";
 import { readManifest, type Manifest } from "./manifest.ts";
 
 export interface EleventyOptions {
@@ -35,12 +36,25 @@ export async function createEleventy(siteDir: string, opts: EleventyOptions = {}
     pathPrefix: opts.pathPrefix,
     async config(cfg: any) {
       if (opts.port) cfg.setServerOptions({ port: opts.port });
+      if (opts.runMode === "serve") applyDevEditor(cfg, dir);
       await applyFeatures(cfg, manifest);
     },
   });
 
   if (opts.runMode) elev.setRunMode(opts.runMode);
   return { elev, manifest };
+}
+
+function applyDevEditor(cfg: any, siteDir: string): void {
+  cfg.setServerOptions({
+    middleware: [createDevEditorMiddleware(siteDir)],
+  });
+  cfg.addTransform("basepage-dev-edit-link", function (this: any, content: string) {
+    return injectEditLink(siteDir, content, {
+      inputPath: this.page?.inputPath ?? this.inputPath,
+      url: this.page?.url ?? this.url,
+    });
+  });
 }
 
 /** Inject the bundled Eleventy plugins enabled by the manifest's feature list. */
