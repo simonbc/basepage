@@ -32,11 +32,23 @@ test("apex domain → repo named after the domain, root path, 4 A records", () =
   expect(plan.dns?.every((r) => r.host === "@")).toBe(true);
 });
 
+test("multi-part public suffix apex domains use A records", () => {
+  const plan = planPublish({ login: "ada", folderName: "site", domain: "example.co.uk" });
+  expect(plan.cname).toBe("example.co.uk");
+  expect(plan.dns?.filter((r) => r.type === "A")).toHaveLength(4);
+  expect(plan.dns?.every((r) => r.host === "@")).toBe(true);
+});
+
 test("subdomain → single CNAME record to <login>.github.io", () => {
   const plan = planPublish({ login: "ada", folderName: "site", domain: "www.ada.dev" });
   expect(plan.repo).toBe("www.ada.dev");
   expect(plan.pathPrefix).toBe("/");
   expect(plan.dns).toEqual([{ type: "CNAME", host: "www", value: "ada.github.io" }]);
+});
+
+test("nested subdomains preserve the full registrar host", () => {
+  const plan = planPublish({ login: "ada", folderName: "site", domain: "blog.docs.example.co.uk" });
+  expect(plan.dns).toEqual([{ type: "CNAME", host: "blog.docs", value: "ada.github.io" }]);
 });
 
 test("strips scheme/path and lowercases the domain", () => {
@@ -54,6 +66,7 @@ test("sanitizeRepoName keeps dots, collapses junk, trims dashes", () => {
 
 test("isApexDomain distinguishes apex from subdomains", () => {
   expect(isApexDomain("ada.dev")).toBe(true);
+  expect(isApexDomain("example.co.uk")).toBe(true);
   expect(isApexDomain("www.ada.dev")).toBe(false);
   expect(isApexDomain("blog.ada.dev")).toBe(false);
 });

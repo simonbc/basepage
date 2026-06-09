@@ -1,5 +1,5 @@
 import { readdirSync, rmSync, statSync, writeFileSync } from "node:fs";
-import { join, resolve } from "node:path";
+import { isAbsolute, join, relative, resolve } from "node:path";
 import { createEleventy, type EleventyOptions } from "../lib/eleventy.ts";
 
 export interface BuildOptions extends Omit<EleventyOptions, "runMode" | "port"> {
@@ -19,10 +19,11 @@ export async function build(siteDir: string, opts: BuildOptions = {}): Promise<B
   const siteAbs = resolve(siteDir);
   const outName = opts.output ?? "_site";
   const outAbs = resolve(siteAbs, outName);
+  const outRel = relative(siteAbs, outAbs);
 
   try {
     // Guard: only ever clean a path inside the site directory.
-    if (opts.clean !== false && outAbs.startsWith(siteAbs + "/")) {
+    if (opts.clean !== false && outRel !== "" && !outRel.startsWith("..") && !isAbsolute(outRel)) {
       rmSync(outAbs, { recursive: true, force: true });
     }
 

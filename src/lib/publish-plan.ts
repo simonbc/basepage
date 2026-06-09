@@ -1,3 +1,5 @@
+import { parse } from "tldts";
+
 /** GitHub Pages' apex A-record IPs. */
 export const GITHUB_PAGES_IPS = [
   "185.199.108.153",
@@ -46,11 +48,16 @@ function hostOf(domain: string): string {
     .toLowerCase();
 }
 
-/** Apex (e.g. `ada.dev`) vs subdomain (`www.ada.dev`). Two-label hosts are apex. */
+/** Apex (e.g. `ada.dev`, `example.co.uk`) vs subdomain (`www.ada.dev`). */
 export function isApexDomain(domain: string): boolean {
   const host = hostOf(domain);
-  if (host.startsWith("www.")) return false;
-  return host.split(".").length <= 2;
+  const parsed = parse(host, { allowPrivateDomains: true });
+  return parsed.domain === host;
+}
+
+function dnsHostForSubdomain(host: string): string {
+  const parsed = parse(host, { allowPrivateDomains: true });
+  return parsed.subdomain || host.split(".")[0];
 }
 
 export function planPublish(opts: { login: string; folderName: string; domain?: string }): PublishPlan {
@@ -61,7 +68,7 @@ export function planPublish(opts: { login: string; folderName: string; domain?: 
     const host = hostOf(opts.domain);
     const dns: DnsRecord[] = isApexDomain(host)
       ? GITHUB_PAGES_IPS.map((value) => ({ type: "A", host: "@", value }))
-      : [{ type: "CNAME", host: host.split(".")[0], value: `${login}.github.io` }];
+      : [{ type: "CNAME", host: dnsHostForSubdomain(host), value: `${login}.github.io` }];
     return {
       repo: sanitizeRepoName(host),
       pathPrefix: "/",
