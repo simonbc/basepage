@@ -33,9 +33,10 @@ export async function createEleventy(siteDir: string, opts: EleventyOptions = {}
 
   const elev = new Eleventy("src", opts.output ?? "_site", {
     configPath: "eleventy.config.mjs",
-    pathPrefix: opts.pathPrefix,
     async config(cfg: any) {
       if (opts.port) cfg.setServerOptions({ port: opts.port });
+      applyUrlFilters(cfg, opts.pathPrefix);
+      applyHtmlPathPrefix(cfg, opts.pathPrefix);
       if (opts.runMode === "serve") applyDevEditor(cfg, dir);
       await applyFeatures(cfg, manifest);
     },
@@ -43,6 +44,21 @@ export async function createEleventy(siteDir: string, opts: EleventyOptions = {}
 
   if (opts.runMode) elev.setRunMode(opts.runMode);
   return { elev, manifest };
+}
+
+function applyUrlFilters(cfg: any, pathPrefix = "/"): void {
+  // Basepage owns path-prefixing so scaffold templates keep using Eleventy's
+  // legacy `url` filter without getting double-prefixed by Eleventy v3's HTML
+  // Base transform. Non-HTML virtual templates like Atom feeds use this filter.
+  cfg.addFilter("basepageUrl", (url = "") => prefixUrl(url, pathPrefix));
+}
+
+function applyHtmlPathPrefix(cfg: any, pathPrefix = "/"): void {
+  if (normalizePathPrefix(pathPrefix) === "/") return;
+  cfg.addTransform("basepage-path-prefix", function (this: any, content: string) {
+    if (!this.outputPath?.endsWith(".html")) return content;
+    return prefixHtmlUrls(content, pathPrefix);
+  });
 }
 
 function applyDevEditor(cfg: any, siteDir: string): void {
@@ -55,6 +71,30 @@ function applyDevEditor(cfg: any, siteDir: string): void {
       url: this.page?.url ?? this.url,
     });
   });
+}
+
+function prefixUrl(url: string, pathPrefix = "/"): string {
+  if (/^[a-z][a-z0-9+.-]*:\/\//i.test(url) || (url.startsWith("//") && url !== "//")) {
+    return url;
+  }
+  const prefix = normalizePathPrefix(pathPrefix);
+  if (prefix === "/") return url;
+  if (url === "/" || url === "") return prefix;
+  if (!url.startsWith("/")) return url;
+  return `${prefix.replace(/\/$/, "")}${url}`;
+}
+
+function normalizePathPrefix(pathPrefix = "/"): string {
+  if (!pathPrefix || pathPrefix === "/") return "/";
+  return `/${pathPrefix.replace(/^\/+|\/+$/g, "")}/`;
+}
+
+function prefixHtmlUrls(content: string, pathPrefix = "/"): string {
+  return content.replace(
+    /\b(href|src|action)=(["'])(.*?)\2/g,
+    (_match, attr: string, quote: string, url: string) =>
+      `${attr}=${quote}${prefixUrl(url, pathPrefix)}${quote}`,
+  );
 }
 
 /** Inject the bundled Eleventy plugins enabled by the manifest's feature list. */
@@ -112,18 +152,18 @@ const FEED_TEMPLATE = `<?xml version="1.0" encoding="utf-8"?>
 <feed xmlns="http://www.w3.org/2005/Atom">
   <title>{{ site.title }}</title>
   {%- if site.tagline %}<subtitle>{{ site.tagline }}</subtitle>{% endif %}
-  <link href="{{ origin }}{{ '/feed.xml' | url }}" rel="self"/>
-  <link href="{{ origin }}{{ '/' | url }}"/>
-  <id>{{ origin }}{{ '/' | url }}</id>
+  <link href="{{ origin }}{{ '/feed.xml' | basepageUrl }}" rel="self"/>
+  <link href="{{ origin }}{{ '/' | basepageUrl }}"/>
+  <id>{{ origin }}{{ '/' | basepageUrl }}</id>
   {%- if collections.posts | length %}
   <updated>{{ collections.posts | getNewestCollectionItemDate | dateToRfc3339 }}</updated>
   {%- endif %}
   {%- for post in collections.posts %}
   <entry>
     <title>{{ post.data.title }}</title>
-    <link href="{{ origin }}{{ post.url | url }}"/>
+    <link href="{{ origin }}{{ post.url | basepageUrl }}"/>
     <updated>{{ post.date | dateToRfc3339 }}</updated>
-    <id>{{ origin }}{{ post.url | url }}</id>
+    <id>{{ origin }}{{ post.url | basepageUrl }}</id>
     <content type="html">{{ post.templateContent | safe }}</content>
   </entry>
   {%- endfor %}

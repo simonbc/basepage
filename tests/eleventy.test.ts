@@ -23,10 +23,16 @@ test("builds a site: html, passthrough css, and url filter honoring pathPrefix",
   expect(existsSync(join(dir, "_site", "css", "style.css"))).toBe(true);
 
   const html = readFileSync(indexPath, "utf8");
-  // url filter must prepend the path prefix for sub-path publishing
-  expect(html).toContain("/myrepo/css/style.css");
+  // HTML links get exactly one path prefix for sub-path publishing.
+  expect(html).toContain('href="/myrepo/css/style.css"');
+  expect(html).toContain('href="/myrepo/feed.xml"');
+  expect(html).not.toContain("/myrepo/myrepo/");
   // manifest metadata surfaces in the output
   expect(html).toContain("Ada");
+
+  const feed = readFileSync(join(dir, "_site", "feed.xml"), "utf8");
+  expect(feed).toContain('href="https://ada.dev/myrepo/feed.xml"');
+  expect(feed).not.toContain("/myrepo/myrepo/");
 });
 
 test("rss feature produces an Atom feed for the blog kind", async () => {
