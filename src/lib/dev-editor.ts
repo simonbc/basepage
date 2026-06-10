@@ -2,6 +2,7 @@ import { existsSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { extname, isAbsolute, relative, resolve, sep } from "node:path";
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { newContent, slugify, type NewType } from "../commands/new.ts";
+import { readManifest } from "./manifest.ts";
 
 const MAX_SAVE_BYTES = 1024 * 1024;
 const EDITABLE_EXTENSIONS = new Set([".md"]);
@@ -57,12 +58,13 @@ export function readEditableSource(siteDir: string, file: string): EditableSourc
   const path = resolveEditableSourcePath(siteDir, file);
   const raw = readFileSync(path, "utf8");
   const parts = splitFrontMatter(raw);
+  const title = readTitle(parts.yaml);
   return {
     file,
     path,
-    title: readTitle(parts.yaml),
+    title,
     draft: readDraft(parts.yaml),
-    body: parts.body,
+    body: isStandalonePageFile(file) ? stripLeadingPageTitle(parts.body, title) : parts.body,
   };
 }
 
@@ -76,7 +78,8 @@ export function writeEditableSource(
 ): EditableSource {
   const path = resolveEditableSourcePath(siteDir, file);
   const raw = readFileSync(path, "utf8");
-  const next = replaceSource(raw, title, body, draft);
+  const nextBody = isStandalonePageFile(file) ? withPageTitle(title, body) : body;
+  const next = replaceSource(raw, title, nextBody, draft);
   writeFileSync(path, next);
   return readEditableSource(siteDir, file);
 }
@@ -207,6 +210,26 @@ function replaceSource(raw: string, title: string, body: string, draft: boolean)
   const updatedYaml = replaceDraft(replaceTitle(yaml, title), draft);
   const normalizedBody = body.endsWith("\n") ? body : `${body}\n`;
   return `---\n${updatedYaml.trimEnd()}\n---\n\n${normalizedBody}`;
+}
+
+function isStandalonePageFile(file: string): boolean {
+  return !file.startsWith("posts/") && !file.startsWith("notes/");
+}
+
+function stripLeadingPageTitle(body: string, title: string): string {
+  const match = body.match(/^(\s*)#\s+(.+?)[ \t]*#*[ \t]*(?:\r?\n|$)/);
+  if (!match) return body;
+
+  const heading = match[2].trim();
+  if (title.trim() && heading !== title.trim()) return body;
+  return body.slice(match[0].length).replace(/^(?:[ \t]*\r?\n)+/, "");
+}
+
+function withPageTitle(title: string, body: string): string {
+  const cleanTitle = title.trim();
+  if (!cleanTitle) return body;
+  const cleanBody = body.replace(/^\s*#\s+.+?[ \t]*#*[ \t]*(?:\r?\n|$)/, "").replace(/^(?:[ \t]*\r?\n)+/, "");
+  return `# ${cleanTitle}\n\n${cleanBody}`;
 }
 
 function replaceTitle(yaml: string, title: string): string {
@@ -397,7 +420,6 @@ function renderNew(siteDir: string, returnTo: string, requestedType: string | nu
       .editor-stage{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);height:calc(100vh - 5.25rem)}
       .editor-pane{min-width:0;padding:clamp(2rem,5vw,4.6rem) clamp(1.5rem,5vw,5rem);overflow:auto}
       .editor-write{border-inline-end:1px solid var(--border,#e6e6e6)}
-      .new-kind{margin:0 0 1.5rem;color:var(--muted,#888);font-size:.95rem}
       .title-row{display:grid;grid-template-columns:auto minmax(0,1fr);align-items:center;gap:.55rem;margin-bottom:2.3rem;color:var(--editor-faint);font-family:var(--font-mono,ui-monospace,"SF Mono",Menlo,Consolas,monospace);font-size:clamp(1.9rem,4vw,2.6rem);font-weight:700;line-height:1.15}
       .title-row span{user-select:none}
       input,textarea{display:block;width:100%;border:0;background:transparent;color:var(--text,CanvasText);font:inherit;outline:none}
@@ -430,7 +452,6 @@ function renderNew(siteDir: string, returnTo: string, requestedType: string | nu
     <form class="editor-form" method="post" action="/__create">
       <main class="editor-stage">
         <section class="editor-pane editor-write" aria-label="Markdown editor">
-          <p class="new-kind">${escapeHtml(heading)}</p>
           <input type="hidden" name="type" value="${type}" />
           <input type="hidden" id="slug" name="slug" value="" />
           <input type="hidden" name="date" value="${today}" />
@@ -520,8 +541,14 @@ function sendError(res: ServerResponse, message: string): void {
 
 function availableNewTypes(siteDir: string): NewType[] {
   const types: NewType[] = [];
-  if (existsSync(resolve(siteDir, "src", "posts", "posts.json"))) types.push("post");
-  if (existsSync(resolve(siteDir, "src", "notes", "notes.json"))) types.push("note");
+  const features = new Set(readManifest(siteDir).features);
+  if (features.has("blog") && existsSync(resolve(siteDir, "src", "posts", "posts.json"))) types.push("post");
+  if (
+    (features.has("wikilinks") || features.has("backlinks")) &&
+    existsSync(resolve(siteDir, "src", "notes", "notes.json"))
+  ) {
+    types.push("note");
+  }
   types.push("page");
   return types;
 }

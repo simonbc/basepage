@@ -1,5 +1,5 @@
 import { test, expect } from "bun:test";
-import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { addFeature } from "../src/commands/add.ts";
@@ -42,6 +42,7 @@ Old body.
   const source = readEditableSource(dir, "about.md");
   expect(source.title).toBe("About");
   expect(source.body).toContain("Old body.");
+  expect(source.body).not.toContain("# About");
 
   writeEditableSource(dir, "about.md", "Edited About", "New body.\n\n[[Start here]]\n");
 
@@ -50,8 +51,35 @@ Old body.
   expect(next).toContain("date: 2026-06-09");
   expect(next).toContain("draft: false");
   expect(next).toContain('title: "Edited About"');
+  expect(next).toContain("# Edited About\n\nNew body.");
   expect(next).toContain("New body.\n\n[[Start here]]");
   expect(next).not.toContain("Old body.");
+});
+
+test("saving a standalone page keeps the page title visible in markdown", () => {
+  const dir = site();
+  const { path } = newContent({ siteDir: dir, type: "page", name: "About" });
+  writeFileSync(
+    path,
+    `---
+layout: base.njk
+title: About
+---
+
+# About
+
+Body copy.
+`,
+  );
+
+  const source = readEditableSource(dir, "about.md");
+  expect(source.body).toBe("Body copy.\n");
+
+  writeEditableSource(dir, "about.md", "Renamed About", "Updated body.\n");
+
+  const next = readFileSync(path, "utf8");
+  expect(next).toContain('title: "Renamed About"');
+  expect(next).toContain("# Renamed About\n\nUpdated body.\n");
 });
 
 test("editor source paths are guarded to the site's src directory", () => {
@@ -95,6 +123,21 @@ test("new link goes straight to the page editor when only pages are available", 
   });
 
   expect(html).toContain('/__new?type=page&amp;return=%2F');
+  expect(html).not.toContain('<details class="basepage-dev-new">');
+});
+
+test("new link ignores post scaffold files when the blog feature is disabled", () => {
+  const dir = site();
+  mkdirSync(join(dir, "src", "posts"), { recursive: true });
+  writeFileSync(join(dir, "src", "posts", "posts.json"), `{\n  "layout": "post.njk",\n  "tags": "post"\n}\n`);
+
+  const html = injectEditLink(dir, "<!doctype html><html><body></body></html>", {
+    inputPath: "./src/index.njk",
+    url: "/",
+  });
+
+  expect(html).toContain('/__new?type=page&amp;return=%2F');
+  expect(html).not.toContain("New Post");
   expect(html).not.toContain('<details class="basepage-dev-new">');
 });
 
