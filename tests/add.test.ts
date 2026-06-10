@@ -38,6 +38,8 @@ test("a blank site, made a blog, then given a post, builds the post + feed", asy
   await build(dir);
   expect(existsSync(join(dir, "_site", "posts", "2026-02-02-hello", "index.html"))).toBe(true);
   expect(existsSync(join(dir, "_site", "feed.xml"))).toBe(true);
+  const blogIndex = readFileSync(join(dir, "_site", "blog", "index.html"), "utf8");
+  expect(blogIndex).toContain("Write your post.");
 });
 
 test("add preserves existing manifest fields and is idempotent", () => {

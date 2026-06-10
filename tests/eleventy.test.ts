@@ -31,6 +31,9 @@ test("builds a site: html, passthrough css, and url filter honoring pathPrefix",
   expect(html).not.toContain("/myrepo/myrepo/");
   // manifest metadata surfaces in the output
   expect(html).toContain("Ada");
+  // Blog index previews the post body, not the SEO/social description front matter.
+  expect(html).toContain("This is a starter post.");
+  expect(html).not.toContain("The first post on a blog I actually own.");
 
   const feed = readFileSync(join(dir, "_site", "feed.xml"), "utf8");
   expect(feed).toContain('href="https://ada.dev/myrepo/feed.xml"');

@@ -10,8 +10,9 @@ layout: base.njk
 <ul class="post-list">
   {% for post in collections.posts %}
   <li>
-    <a href="{{ post.url | url }}">{{ post.data.title }}</a>
+    <a class="post-title" href="{{ post.url | url }}">{{ post.data.title }}</a>
     <time datetime="{{ post.date | isoDate }}">{{ post.date | readableDate }}</time>
+    <p class="post-excerpt">{{ post.templateContent | excerpt(36) }}</p>
   </li>
   {% endfor %}
 </ul>

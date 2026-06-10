@@ -131,22 +131,20 @@ a {
   padding: 0;
 }
 .post-list li {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 1rem;
-  padding-block: 0.7rem;
+  display: grid;
+  gap: 0.35rem;
+  padding-block: 1.2rem;
   border-top: 1px solid var(--border);
 }
 .post-list li:first-child {
   border-top: none;
 }
-.post-list a {
+.post-title {
   text-decoration: none;
   font-weight: 500;
   color: var(--text);
 }
-.post-list a:hover {
+.post-title:hover {
   color: var(--accent);
 }
 .post-list time {
@@ -154,6 +152,12 @@ a {
   font-size: 0.9rem;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
+}
+.post-excerpt {
+  margin: 0.25rem 0 0;
+  color: var(--muted);
+  font-size: 0.95rem;
+  line-height: 1.55;
 }
 
 /* Single post ------------------------------------------------------------- */

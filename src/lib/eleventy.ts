@@ -56,6 +56,7 @@ function applyUrlFilters(cfg: any, pathPrefix = "/"): void {
   cfg.addFilter("xmlEscape", xmlEscape);
   cfg.addFilter("cdata", cdata);
   cfg.addFilter("basepageDateToRfc822", dateToRfc822);
+  cfg.addFilter("excerpt", excerpt);
 }
 
 function applyHtmlPathPrefix(cfg: any, pathPrefix = "/"): void {
@@ -232,4 +233,35 @@ function cdata(value: unknown): string {
 
 function dateToRfc822(value: Date | string | number): string {
   return new Date(value).toUTCString();
+}
+
+function excerpt(value: unknown, words = 40): string {
+  const limit = Number(words);
+  const text = decodeHtmlEntities(stripHtml(String(value ?? "")))
+    .replace(/\s+/g, " ")
+    .replace(/\s+([.,;:!?])/g, "$1")
+    .trim();
+  if (!text) return "";
+
+  const parts = text.split(" ");
+  const clipped = Number.isFinite(limit) && limit > 0 ? parts.slice(0, limit) : parts;
+  const suffix = clipped.length < parts.length ? "..." : "";
+  return xmlEscape(`${clipped.join(" ")}${suffix}`);
+}
+
+function stripHtml(value: string): string {
+  return value
+    .replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, " ")
+    .replace(/<style\b[^>]*>[\s\S]*?<\/style>/gi, " ")
+    .replace(/<[^>]+>/g, " ");
+}
+
+function decodeHtmlEntities(value: string): string {
+  return value
+    .replace(/&nbsp;/g, " ")
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'");
 }

@@ -122,7 +122,7 @@ export function injectEditLink(siteDir: string, content: string, page: { inputPa
     links.unshift(`<a href="/__edit?${escapeAttr(params.toString())}">Edit</a>`);
   }
   const widget = `<style>
-.basepage-dev-links{position:fixed;inset-block-start:.75rem;inset-inline-end:.75rem;z-index:2147483647;display:flex;gap:.4rem;font:500 13px/1.2 var(--font-sans,var(--font,ui-sans-serif,system-ui,sans-serif))}
+.basepage-dev-links{position:fixed;inset-block-start:.75rem;inset-inline-end:1.5rem;z-index:2147483647;display:flex;gap:.4rem;font:500 13px/1.2 var(--font-sans,var(--font,ui-sans-serif,system-ui,sans-serif))}
 .basepage-dev-links a{padding:.35rem .6rem;border:1px solid color-mix(in srgb,var(--border,#d8d8d8) 80%,transparent);border-radius:999px;background:color-mix(in srgb,var(--bg,Canvas) 88%,transparent);color:var(--muted,var(--text,CanvasText));text-decoration:none;box-shadow:0 1px 6px rgb(0 0 0/.08);backdrop-filter:blur(8px)}
 .basepage-dev-links a:hover{color:var(--accent,LinkText);border-color:var(--accent,LinkText)}
 </style><nav class="basepage-dev-links" aria-label="Basepage local tools">${links.join("")}</nav>`;

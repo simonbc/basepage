@@ -52,9 +52,9 @@ sections and **`new`** content onto it. Three verbs, three jobs — don't confus
 3. **Design + write.** Edit `src/css/style.css` (start at the `:root` tokens) and the
    templates in `src/_includes/`. Write real copy into the markdown/`.njk` files. Take
    the look wherever the user asked.
-4. **Preview.** `basepage serve` (http://localhost:8080) — edits to content and CSS
-   live-reload. Serve mode also injects local-only `Edit` links that open a same-port
-   editor for existing markdown pages/posts/notes. Use this to check your work.
+4. **Preview.** `basepage serve` — it prints the localhost URL, and edits to content
+   and CSS live-reload. Serve mode also injects local-only `Edit`/`+ New` tools for
+   markdown pages/posts/notes. Use this to check your work.
 5. **Publish** when the user approves: `basepage publish` (browser sign-in, no API
    keys — it reuses the GitHub CLI login if present). Set a `domain` in `basepage.json`
    first for a custom domain.
@@ -94,6 +94,9 @@ src/
   sub-path publishing.
 - Site metadata (title, tagline, domain) lives **only** in `basepage.json`; templates
   read it via `site.*`. Don't duplicate it into content.
+- Post front-matter `description` is metadata for SEO/sharing. Blog indexes should
+  preview the actual post body, usually with `{{ post.templateContent | excerpt(36) }}`,
+  rather than rendering `post.data.description`.
 - Restyle by editing the `:root` tokens first, then rules.
 - Features are data: enable them in `basepage.json` (via `add`), never by importing
   plugins in the scaffold config.
@@ -106,7 +109,7 @@ src/
   domain or runs locally; set a `domain` before publishing a wiki (a no-domain GitHub
   project sub-path would break in-content wikilinks).
 - Publish is human-gated: preview with `serve`, get the user's OK, then `publish`.
-- Browser editing is local-only: `serve` injects the links and handles `/__edit` +
-  `/__save`; `build`/`publish` output stays plain static files. Saves are guarded to
-  existing `.md` files under the site's `src/` directory, so templates like
-  `src/index.njk` are not browser-editable.
+- Browser editing is local-only: `serve` injects the links and handles `/__edit`,
+  `/__save`, `/__new`, and `/__create`; `build`/`publish` output stays plain static
+  files. Saves are guarded to `.md` files under the site's `src/` directory, so
+  templates like `src/index.njk` are not browser-editable.

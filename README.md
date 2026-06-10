@@ -108,6 +108,10 @@ intent) chooses a richer starting point:
 Presets are deliberately understated **bones**, not finished looks — easy for the agent
 to restyle in any direction.
 
+Blog post `description` front matter is metadata for SEO and social sharing. Blog
+indexes preview the actual post body with Basepage's `excerpt` filter instead of
+rendering the description as visible copy.
+
 ## Publishing
 
 `basepage publish` deploys to GitHub Pages with **no API keys**. It signs in with

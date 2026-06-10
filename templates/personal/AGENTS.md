@@ -32,6 +32,8 @@ AGENTS.md            This file.
 - Don't add dependencies to the scaffold or import plugins in `eleventy.config.mjs`.
   Features are enabled in `basepage.json` and injected by Basepage at build time.
 - A new post is a new file in `src/posts/` with `title` + `date` front matter.
+- Post `description` front matter is metadata for SEO/sharing; writing indexes should
+  preview the post body with `{{ post.templateContent | excerpt(36) }}` instead.
 
 ## Commands (run by the human)
 

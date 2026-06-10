@@ -24,6 +24,9 @@ src/
 - The posts collection, `readableDate`/`isoDate` filters, and the `/feed.xml` RSS feed
   plus `/feed.json` JSON Feed come from the `blog`/`rss` features — they're injected
   at build time, not defined in the scaffold config.
+- Use post front-matter `description` as metadata for SEO/sharing. Blog indexes should
+  show body-derived excerpts with `{{ post.templateContent | excerpt(36) }}`, not the
+  description field.
 - Always route internal links/assets through the `url` filter:
   `{{ '/css/style.css' | url }}`, `{{ post.url | url }}`.
 - Site metadata (title, tagline, domain) lives **only** in `basepage.json` (`site.*`).
