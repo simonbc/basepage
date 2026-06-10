@@ -100,17 +100,32 @@ export async function searchSemanticIndex(opts: SemanticIndexSearchOptions): Pro
     const [queryVector] = await provider.embed([opts.query]);
     const rows = (await db.query<Row>(
       `
-      select
-        path,
-        title,
-        url,
-        text,
-        1 - (embedding <=> $1::vector) as score
-      from chunks
-      where site = $2
-        and model = $3
-        and embedding_dimensions = $4
-      order by embedding <=> $1::vector asc, path asc
+      with ranked as (
+        select
+          path,
+          title,
+          url,
+          text,
+          1 - (embedding <=> $1::vector) as score
+        from chunks
+        where site = $2
+          and model = $3
+          and embedding_dimensions = $4
+      ),
+      best_per_page as (
+        select distinct on (path)
+          path,
+          title,
+          url,
+          text,
+          score
+        from ranked
+        where score > 0
+        order by path asc, score desc
+      )
+      select path, title, url, text, score
+      from best_per_page
+      order by score desc, path asc
       limit $5
       `,
       [
@@ -123,9 +138,7 @@ export async function searchSemanticIndex(opts: SemanticIndexSearchOptions): Pro
     )).rows;
 
     const terms = opts.query.toLowerCase().split(/[^a-z0-9]+/).filter(Boolean);
-    return rows
-      .filter((row) => row.score > 0)
-      .map((row) => toSearchResult(rowToDocument(row), row.score, terms));
+    return rows.map((row) => toSearchResult(rowToDocument(row), row.score, terms));
   } finally {
     await db.close();
   }

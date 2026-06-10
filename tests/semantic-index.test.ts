@@ -52,3 +52,34 @@ test("indexes markdown chunks and searches them with persisted embeddings", asyn
   expect(results[0].title).toBe("Publishing History");
   expect(results[0].file).toBe("notes/publishing-history.md");
 });
+
+test("semantic search returns each page once when a page has multiple matching chunks", async () => {
+  const root = mkdtempSync(join(tmpdir(), "bp-index-dedup-"));
+  const home = join(root, "home");
+  const dir = join(root, "site");
+  initSite({ dir, template: "blank", title: "Index" });
+  newContent({
+    siteDir: dir,
+    type: "page",
+    name: "long",
+    title: "Long",
+    body: [
+      `alpha ${"x".repeat(800)}`,
+      `alpha ${"y".repeat(800)}`,
+      `alpha ${"z".repeat(800)}`,
+    ].join("\n\n"),
+  });
+
+  const keywordProvider: EmbeddingProvider = {
+    model: "test:alpha",
+    async embed(texts: string[]) {
+      return texts.map((text) => [text.toLowerCase().includes("alpha") ? 1 : 0]);
+    },
+  };
+
+  const indexed = await indexSite({ site: "notes", siteDir: dir, home, provider: keywordProvider });
+  expect(indexed.chunks).toBeGreaterThan(1);
+
+  const results = await searchSemanticIndex({ site: "notes", query: "alpha", home, provider: keywordProvider });
+  expect(results.map((result) => result.file)).toEqual(["long.md"]);
+});
