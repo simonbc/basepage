@@ -12,13 +12,15 @@ Your files, your domain, your model.
 
 Basepage is built to be driven by an agent. `init` scaffolds a **blank, legible
 canvas** by default — the agent shapes it from your prompt by editing files and running
-deterministic commands. There's a bundled Claude skill (`skills/basepage/SKILL.md`) so
-you can just say:
+deterministic commands. There's a reusable agent instruction bundle
+(`skills/basepage/SKILL.md`) so you can just say:
 
 > "Build me a blog about climbing, dark and minimal, then preview it."
 
 and the agent picks a starting preset, scaffolds it, writes a post, restyles the
-tokens, and serves it. Install the skill with `cp -r skills/basepage ~/.claude/skills/`.
+tokens, and serves it. For Claude Code, install it with
+`cp -r skills/basepage ~/.claude/skills/`. Other agents can use the same file as
+plain instructions; the CLI contract is not agent-specific.
 
 The boundary: **structure** (kind, pages, posts, features) is deterministic CLI
 commands; **design + prose** is the agent editing files.
@@ -41,9 +43,10 @@ bun run src/cli.ts <command>     # or, once linked: basepage <command>
 | --- | --- |
 | `basepage init [dir]` | Scaffold a new site with a structure (blank canvas by default). |
 | `basepage new <page\|post\|note> <name>` | Add content. |
-| `basepage capture <site> --title <s>` | Save stdin/body as a new page, post, or note in a registered site. |
-| `basepage search [site\|all] <query>` | Search markdown in the current site or registered sites. |
-| `basepage sites <add\|list\|default>` | Register sites in `~/.basepage/sites.json`. |
+| `basepage capture <site> --title <s>` | Save stdin/body as a new page, post, or note in a remembered site. |
+| `basepage search [site\|all] <query>` | Search markdown in the current site or remembered sites. |
+| `basepage index [site\|all]` | Build the local embedding index for semantic search. |
+| `basepage sites <list\|default>` | Show remembered sites or set the default. |
 | `basepage add <capability>` | Enable a capability/section (blog, wikilinks, rss, syntax-highlight). |
 | `basepage restructure <kind>` | Change an existing site's structure (blank\|personal\|blog\|wiki). |
 | `basepage serve [dir]` | Live preview with reload and browser authoring tools. |
@@ -53,7 +56,7 @@ bun run src/cli.ts <command>     # or, once linked: basepage <command>
 
 `init` flags: `--template <blank\|personal\|blog\|wiki>` `--title` `--tagline` `--domain` `--yes`
 `new` flags: `--title` `--dir` `--site`  ·  `capture` flags: `--to` `--type` `--title` `--body`
-`search` flags: `--site` `--semantic` `--limit`  ·  `serve` flags: `--port`  ·  `build` flags: `--output` `--pathprefix`
+`search` flags: `--site` `--semantic` `--limit`  ·  `index` env: `BASEPAGE_EMBEDDING_PROVIDER` `BASEPAGE_EMBEDDING_MODEL`  ·  `serve` flags: `--port`  ·  `build` flags: `--output` `--pathprefix`
 
 ```bash
 # scaffold a blank canvas, make it a blog, write a post, preview
@@ -65,30 +68,54 @@ basepage serve mysite          # prints a localhost URL — edit in the browser 
 
 ## Registered Sites And Search
 
-Register sites once to use them from any working directory:
+`basepage init` remembers new sites automatically in `~/.basepage/sites.json`.
+That file stores paths plus cached metadata, not source content. Content stays in each
+site's `src/` folder.
+If the directory is already a Basepage site, `basepage init <dir>` does not scaffold
+or overwrite files; it just makes sure the site is remembered.
 
 ```bash
-basepage sites add ~/sites/notes --as notes
-basepage sites add ~/sites/blog --as blog
+basepage init ~/sites/notes --template wiki --title Notes --yes
+basepage init ~/sites/blog --template blog --title "Field Notes" --yes
+basepage sites list
 basepage sites default notes
 ```
 
-The registry lives in `~/.basepage/sites.json` and stores paths plus cached metadata,
-not source content. Content stays in each site's `src/` folder.
-
-Once registered, commands can target sites by name:
+Once remembered, commands can target sites by name from any working directory:
 
 ```bash
 basepage new note "git-backed history" --site notes
 printf "Summary text" | basepage capture notes --title "Meeting summary" --type note --body -
 basepage search notes "revision history"
+basepage index notes
 basepage search all "publishing tradeoffs" --semantic
 ```
 
-Plain search matches title, path, and markdown body text. `--semantic` uses a local,
-zero-dependency ranking pass over tokens, stems, phrases, and character n-grams. It
-does not call an embedding API or write a vector database yet, but the command shape is
-ready for that later.
+Plain search matches title, path, and markdown body text. For proper semantic search,
+run `basepage index <site>` after choosing an embedding provider. Basepage stores
+chunk embeddings in a local PGlite/pgvector database at `~/.basepage/basepage.pglite`;
+the source markdown stays in the site.
+
+```bash
+# Hosted providers
+export VOYAGE_API_KEY=...
+basepage index notes
+basepage search notes "git-backed revision history" --semantic
+
+export OPENAI_API_KEY=...
+BASEPAGE_EMBEDDING_PROVIDER=openai basepage index notes
+
+# Local model via Ollama
+BASEPAGE_EMBEDDING_PROVIDER=ollama BASEPAGE_EMBEDDING_MODEL=nomic-embed-text basepage index notes
+```
+
+`BASEPAGE_EMBEDDING_PROVIDER` can be `voyage`, `openai`, `ollama`, or `local`.
+Hosted providers read `VOYAGE_API_KEY`/`OPENAI_API_KEY` or the Basepage-scoped
+`BASEPAGE_VOYAGE_API_KEY`/`BASEPAGE_OPENAI_API_KEY`; Ollama reads `OLLAMA_HOST` or
+`BASEPAGE_OLLAMA_HOST`. Use the same provider/model when searching that you used for
+indexing. If no provider is configured, `basepage search --semantic` falls back to
+Basepage's local zero-dependency ranking pass, so agents can still search notes
+without network access.
 
 ## How it works
 

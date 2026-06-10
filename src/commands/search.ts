@@ -14,7 +14,7 @@ export interface SearchResult {
   score: number;
 }
 
-interface Document {
+export interface SearchDocument {
   file: string;
   title: string;
   body: string;
@@ -31,7 +31,7 @@ export function searchSite(siteDir: string, query: string, opts: SearchOptions =
   return results.slice(0, opts.limit ?? 10);
 }
 
-function collectDocuments(siteDir: string): Document[] {
+export function collectDocuments(siteDir: string): SearchDocument[] {
   const srcDir = resolve(siteDir, "src");
   if (!existsSync(srcDir)) throw new Error(`No src/ directory in ${siteDir}.`);
 
@@ -51,7 +51,7 @@ function collectDocuments(siteDir: string): Document[] {
   });
 }
 
-function textSearch(docs: Document[], query: string): SearchResult[] {
+function textSearch(docs: SearchDocument[], query: string): SearchResult[] {
   const needle = normalizeText(query);
   const terms = tokens(query);
   return docs
@@ -65,10 +65,10 @@ function textSearch(docs: Document[], query: string): SearchResult[] {
     })
     .filter((item) => item.score > 0)
     .sort((a, b) => b.score - a.score || a.doc.file.localeCompare(b.doc.file))
-    .map(({ doc, score }) => toResult(doc, score, terms));
+    .map(({ doc, score }) => toSearchResult(doc, score, terms));
 }
 
-function semanticSearch(docs: Document[], query: string): SearchResult[] {
+function semanticSearch(docs: SearchDocument[], query: string): SearchResult[] {
   const queryVector = vectorize(query);
   return docs
     .map((doc) => {
@@ -78,7 +78,7 @@ function semanticSearch(docs: Document[], query: string): SearchResult[] {
     })
     .filter((item) => item.score > 0)
     .sort((a, b) => b.score - a.score || a.doc.file.localeCompare(b.doc.file))
-    .map(({ doc, score }) => toResult(doc, score, tokens(query)));
+    .map(({ doc, score }) => toSearchResult(doc, score, tokens(query)));
 }
 
 function listMarkdown(dir: string): string[] {
@@ -131,7 +131,7 @@ function renderedUrlForFile(file: string): string {
   return `/${file.replace(/\.md$/, "").replace(/\/index$/, "")}/`.replace(/\/+/g, "/");
 }
 
-function toResult(doc: Document, score: number, terms: string[]): SearchResult {
+export function toSearchResult(doc: SearchDocument, score: number, terms: string[]): SearchResult {
   return {
     file: doc.file,
     title: doc.title,

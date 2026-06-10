@@ -59,6 +59,36 @@ sections and **`new`** content onto it. Three verbs, three jobs — don't confus
    keys — it reuses the GitHub CLI login if present). Set a `domain` in `basepage.json`
    first for a custom domain.
 
+## Working across sites
+
+`basepage init <dir>` automatically tracks the site in `~/.basepage/sites.json`.
+That registry is only paths and cached metadata; content stays in each site's `src/`.
+This lets any agent or shell create, capture, and search content from another working
+directory:
+
+```
+basepage sites list
+basepage sites default notes
+basepage new note "revision history" --site notes
+printf "Summary text" | basepage capture notes --title "Meeting summary" --type note --body -
+basepage search notes "revision history"
+```
+
+For semantic search, build the local PGlite/pgvector embedding index first:
+
+```
+basepage index notes
+basepage search notes "git-backed revision history" --semantic
+```
+
+The embedding backend is provider-neutral. Use `BASEPAGE_EMBEDDING_PROVIDER` with
+`voyage`, `openai`, `ollama`, or `local`, and optionally set
+`BASEPAGE_EMBEDDING_MODEL`. Hosted providers read standard API keys
+(`VOYAGE_API_KEY`, `OPENAI_API_KEY`) or Basepage-scoped keys
+(`BASEPAGE_VOYAGE_API_KEY`, `BASEPAGE_OPENAI_API_KEY`); Ollama uses `OLLAMA_HOST`,
+`BASEPAGE_OLLAMA_HOST`, or localhost. If no provider is configured,
+`search --semantic` falls back to local token/phrase ranking.
+
 ## Preset routing (intent → `--template`)
 
 | User wants… | `--template` |

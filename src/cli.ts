@@ -1,4 +1,5 @@
 #!/usr/bin/env bun
+import { existsSync } from "node:fs";
 import { basename, relative, resolve } from "node:path";
 import { createInterface } from "node:readline/promises";
 import { stdin, stdout } from "node:process";
@@ -8,9 +9,11 @@ import { build, formatBytes } from "./commands/build.ts";
 import { publish, unpublish } from "./commands/publish.ts";
 import { newContent } from "./commands/new.ts";
 import { searchSite, type SearchResult } from "./commands/search.ts";
+import { indexSite, searchSemanticIndex } from "./commands/index.ts";
 import { addFeature, ADD_TARGETS } from "./commands/add.ts";
 import { restructure } from "./commands/restructure.ts";
-import { basepageHome, readRegistry, registerSite, setDefaultSite } from "./lib/basepage-home.ts";
+import { autoRegisterSite, basepageHome, readRegistry, setDefaultSite } from "./lib/basepage-home.ts";
+import { manifestPath } from "./lib/manifest.ts";
 import { listTemplates, describeTemplates, resolveTemplateChoice } from "./lib/scaffold.ts";
 import { resolveSiteDir } from "./lib/site-resolver.ts";
 import type { Interface as ReadlineInterface } from "node:readline/promises";
@@ -45,6 +48,17 @@ const str = (v: string | boolean | undefined): string | undefined =>
 
 async function cmdInit(positionals: string[], flags: Record<string, string | boolean>) {
   const dir = resolve(positionals[0] ?? ".");
+  const existing = existsSync(manifestPath(dir));
+  if (existing) {
+    const registered = autoRegisterSite(dir);
+    console.log(`\n✓ Already a Basepage site in ${relativeOrDot(dir)}`);
+    console.log(`✓ Remembered as "${registered.alias}"${registered.defaulted ? " (default)" : ""}\n`);
+    console.log("Next:");
+    console.log("  basepage serve     # live preview; prints the localhost URL");
+    console.log("  …use Edit/+ New in the browser, or edit src/ directly\n");
+    return;
+  }
+
   const interactive = stdin.isTTY && flags.yes !== true;
 
   let template = str(flags.template);
@@ -68,8 +82,10 @@ async function cmdInit(positionals: string[], flags: Record<string, string | boo
   }
 
   const { dir: created, template: used } = initSite({ dir, template: template ?? "blank", title, tagline, domain });
+  const registered = autoRegisterSite(created);
   const rel = relativeOrDot(created);
   console.log(`\n✓ Created a "${used}" basepage in ${rel}\n`);
+  console.log(`✓ Remembered as "${registered.alias}"${registered.defaulted ? " (default)" : ""}\n`);
   console.log("Next:");
   if (rel !== ".") console.log(`  cd ${rel}`);
   console.log("  basepage serve     # live preview; prints the localhost URL");
@@ -167,19 +183,11 @@ async function cmdSites(positionals: string[], flags: Record<string, string | bo
   const subcommand = positionals[0] || "list";
   const home = str(flags.home) || basepageHome();
 
-  if (subcommand === "add") {
-    const dir = resolve(positionals[1] ?? ".");
-    const alias = str(flags.as);
-    const site = registerSite(dir, { alias, home });
-    console.log(`✓ Registered ${alias || basename(dir)} → ${site.path}`);
-    return;
-  }
-
   if (subcommand === "list") {
     const registry = readRegistry(home);
     const names = Object.keys(registry.sites).sort();
     if (!names.length) {
-      console.log("No registered sites. Run `basepage sites add <dir> --as <name>`.");
+      console.log("No sites yet. Run `basepage init <dir>` to create one.");
       return;
     }
     for (const name of names) {
@@ -198,7 +206,7 @@ async function cmdSites(positionals: string[], flags: Record<string, string | bo
     return;
   }
 
-  throw new Error("Usage: basepage sites <add|list|default>");
+  throw new Error("Usage: basepage sites <list|default>");
 }
 
 async function cmdSearch(positionals: string[], flags: Record<string, string | boolean>) {
@@ -212,15 +220,34 @@ async function cmdSearch(positionals: string[], flags: Record<string, string | b
   if (!query) throw new Error("Usage: basepage search [site|all] <query> [--semantic] [--limit n]");
 
   if (siteArg === "all") {
-    const results = Object.entries(registry.sites).flatMap(([name, site]) =>
-      searchSite(site.path, query, { semantic, limit }).map((result) => ({ ...result, site: name })),
-    );
+    const results = (await Promise.all(Object.entries(registry.sites).map(async ([name, site]) =>
+      (await searchRememberedSite(name, site.path, query, { semantic, limit })).map((result) => ({ ...result, site: name })),
+    ))).flat();
     printSearchResults(results.sort((a, b) => b.score - a.score).slice(0, limit ?? 10));
     return;
   }
 
   const dir = resolveSiteDir({ site: siteArg });
-  printSearchResults(searchSite(dir, query, { semantic, limit }));
+  printSearchResults(await searchRememberedSite(siteArg, dir, query, { semantic, limit }));
+}
+
+async function cmdIndex(positionals: string[]) {
+  const target = positionals[0] || "all";
+  const registry = readRegistry();
+
+  if (target === "all") {
+    const entries = Object.entries(registry.sites);
+    if (!entries.length) throw new Error("No remembered sites. Run `basepage init <dir>` first.");
+    for (const [name, site] of entries) {
+      const result = await indexSite({ site: name, siteDir: site.path });
+      console.log(`✓ Indexed ${name}: ${result.files} files, ${result.chunks} chunks (${result.model})`);
+    }
+    return;
+  }
+
+  const dir = resolveSiteDir({ site: target });
+  const result = await indexSite({ site: target, siteDir: dir });
+  console.log(`✓ Indexed ${target}: ${result.files} files, ${result.chunks} chunks (${result.model})`);
 }
 
 async function cmdAdd(positionals: string[]) {
@@ -270,6 +297,25 @@ function printSearchResults(results: Array<SearchResult & { site?: string }>): v
   }
 }
 
+async function searchRememberedSite(
+  site: string | undefined,
+  dir: string,
+  query: string,
+  opts: { semantic: boolean; limit?: number },
+): Promise<SearchResult[]> {
+  if (!opts.semantic || !site) return searchSite(dir, query, opts);
+
+  try {
+    const indexed = await searchSemanticIndex({ site, query, limit: opts.limit });
+    if (indexed.length) return indexed;
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    if (!/No embedding provider configured|OPENAI_API_KEY|VOYAGE_API_KEY|Ollama/.test(message)) throw err;
+  }
+
+  return searchSite(dir, query, opts);
+}
+
 function usage() {
   console.log(`basepage ${VERSION} — own your corner of the web, edited by your agent
 
@@ -277,8 +323,9 @@ Usage:
   basepage init [dir]        Scaffold a new site (interactive; blank canvas by default)
   basepage new <page|post|note> <name>   Add a page, post, or note
   basepage capture <site> --title <s>     Save stdin/body as a new page, post, or note
-  basepage search [site|all] <query>      Search registered or current-site markdown
-  basepage sites <add|list|default>       Register sites in ~/.basepage/sites.json
+  basepage search [site|all] <query>      Search remembered or current-site markdown
+  basepage index [site|all]               Build the local embedding index
+  basepage sites <list|default>           Show remembered sites or set the default
   basepage add <capability>  Enable a capability/section (${ADD_TARGETS.join(", ")})
   basepage restructure <kind>   Change the site's structure (blank|personal|blog|wiki)
   basepage serve [dir]       Live preview with reload + local authoring tools
@@ -290,6 +337,7 @@ init flags:   --template <${listTemplates().join("|")}>  --title <s>  --tagline 
 new flags:    --title <s>  --dir <dir>  --site <name>
 capture flags: --to <name>  --type <note|post|page>  --title <s>  --body <s|->
 search flags: --site <name>  --semantic  --limit <n>
+index env:    BASEPAGE_EMBEDDING_PROVIDER=<voyage|openai|ollama|local>  BASEPAGE_EMBEDDING_MODEL=<model>
 serve flags:  --port <n>
 build flags:  --output <dir>  --pathprefix </repo/>
 `);
@@ -317,6 +365,8 @@ async function main() {
       return cmdSites(positionals, flags);
     case "search":
       return cmdSearch(positionals, flags);
+    case "index":
+      return cmdIndex(positionals);
     case "add":
       return cmdAdd(positionals);
     case "restructure":

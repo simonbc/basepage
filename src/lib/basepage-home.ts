@@ -59,10 +59,31 @@ export function registerSite(siteDir: string, opts: { alias?: string; home?: str
   return site;
 }
 
+export function autoRegisterSite(siteDir: string, opts: { home?: string } = {}): { alias: string; site: RegisteredSite; defaulted: boolean } {
+  const dir = resolve(siteDir);
+  const manifest = readManifest(dir);
+  const registry = readRegistry(opts.home);
+  const alias = availableAlias(normalizeAlias(basename(dir)) || "site", dir, registry);
+  const site = {
+    path: dir,
+    title: manifest.title,
+    features: manifest.features,
+  };
+
+  registry.sites[alias] = site;
+  let defaulted = false;
+  if (!registry.defaults.site) {
+    registry.defaults.site = alias;
+    defaulted = true;
+  }
+  writeRegistry(registry, opts.home);
+  return { alias, site, defaulted };
+}
+
 export function setDefaultSite(alias: string, opts: { key?: string; home?: string } = {}): void {
   const name = normalizeAlias(alias);
   const registry = readRegistry(opts.home);
-  if (!registry.sites[name]) throw new Error(`Unknown site "${alias}". Run \`basepage sites add\` first.`);
+  if (!registry.sites[name]) throw new Error(`Unknown site "${alias}". Run \`basepage sites list\` to see remembered sites.`);
   registry.defaults[opts.key || "site"] = name;
   writeRegistry(registry, opts.home);
 }
@@ -70,7 +91,7 @@ export function setDefaultSite(alias: string, opts: { key?: string; home?: strin
 export function resolveRegisteredSite(alias: string, home = basepageHome()): RegisteredSite {
   const registry = readRegistry(home);
   const site = registry.sites[normalizeAlias(alias)];
-  if (!site) throw new Error(`Unknown site "${alias}". Run \`basepage sites list\` to see registered sites.`);
+  if (!site) throw new Error(`Unknown site "${alias}". Run \`basepage sites list\` to see remembered sites.`);
   return site;
 }
 
@@ -82,6 +103,17 @@ export function resolveDefaultSite(home = basepageHome()): RegisteredSite | null
 
 export function normalizeAlias(value: string): string {
   return value.trim().toLowerCase().replace(/[^a-z0-9._-]+/g, "-").replace(/^-+|-+$/g, "");
+}
+
+function availableAlias(base: string, path: string, registry: SiteRegistry): string {
+  const existing = registry.sites[base];
+  if (!existing || resolve(existing.path) === path) return base;
+
+  for (let i = 2; ; i++) {
+    const candidate = `${base}-${i}`;
+    const site = registry.sites[candidate];
+    if (!site || resolve(site.path) === path) return candidate;
+  }
 }
 
 function normalizeSites(raw: Record<string, unknown>): Record<string, RegisteredSite> {

@@ -21,5 +21,5 @@ export function resolveSiteDir(opts: ResolveSiteOptions = {}): string {
   const def = resolveDefaultSite(home);
   if (def) return def.path;
 
-  throw new Error("No Basepage site found. Run inside a site, pass `--site <name>`, or register one with `basepage sites add`.");
+  throw new Error("No Basepage site found. Run inside a site, pass `--site <name>`, or run `basepage init <dir>` once so Basepage can track it.");
 }

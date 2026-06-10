@@ -8,6 +8,8 @@
         "@11ty/eleventy": "^3.0.0",
         "@11ty/eleventy-plugin-rss": "^2.0.2",
         "@11ty/eleventy-plugin-syntaxhighlight": "^5.0.0",
+        "@electric-sql/pglite": "^0.5.1",
+        "@electric-sql/pglite-pgvector": "^0.0.2",
         "@photogabble/eleventy-plugin-interlinker": "^1.1.0",
         "tldts": "^6.1.86",
       },
@@ -50,6 +52,10 @@
     "@csstools/css-parser-algorithms": ["@csstools/css-parser-algorithms@3.0.5", "", { "peerDependencies": { "@csstools/css-tokenizer": "^3.0.4" } }, "sha512-DaDeUkXZKjdGhgYaHNJTV9pV7Y9B3b644jCLs9Upc3VeNGg6LWARAT6O+Q+/COo+2gg/bM5rhpMAtf70WqfBdQ=="],
 
     "@csstools/css-tokenizer": ["@csstools/css-tokenizer@3.0.4", "", {}, "sha512-Vd/9EVDiu6PPJt9yAh6roZP6El1xHrdvIVGjyBsHR0RYwNHgL7FJPyIIW4fANJNG6FtyZfvlRPpFI4ZM/lubvw=="],
+
+    "@electric-sql/pglite": ["@electric-sql/pglite@0.5.1", "", {}, "sha512-h2Vc+qkQqsEL5kvyN5nBAxn3Vbyvka7QfDW7Io+CdcwU1+X8JbCAN2og+5dI11S3eJuDfroUCxzJaap6k+ezEw=="],
+
+    "@electric-sql/pglite-pgvector": ["@electric-sql/pglite-pgvector@0.0.2", "", { "peerDependencies": { "@electric-sql/pglite": "0.5.1" } }, "sha512-Gu9Nv7JHlg6BgOLqPCR6lCjI+3xlb7ej5qUtHWmzEYA0ZKzuNgeDK16nRO0ELInwzhLptLqX7VdWyYRElSXjdQ=="],
 
     "@photogabble/eleventy-plugin-interlinker": ["@photogabble/eleventy-plugin-interlinker@1.1.2", "", { "dependencies": { "chalk": "^4.1.1", "entities": "^4.5.0", "jsdom": "^25.0.1", "markdown-it": "^14.1.0" } }, "sha512-y+HyYE6yeyq9835G3B/yelMcUga6a6wOtBw3/wlp9QmTqcMMEYhTPqzd76vHfOb9S5Q/s0IMOQizba+3+yaD7w=="],
 
