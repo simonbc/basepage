@@ -80,8 +80,9 @@ pipeline stays fixed: scaffold → persist → generate → view → publish.
 injects local tools into generated HTML pages: `Edit` appears on pages backed by a
 markdown source file under `src/`, and `+ New` appears everywhere. `Edit` opens a
 same-port editor at `/__edit` with a title field, draft checkbox, and markdown body.
-`+ New` opens `/__new`, where you can create a page, post, or note depending on the
-site's enabled features. New browser-created content defaults to `draft: true`.
+When multiple content types are enabled, `+ New` opens a small picker for page, post,
+or note. Each choice goes straight to `/__new?type=...`, a blank editor for that
+content type. New browser-created content defaults to `draft: true`.
 
 Saving submits to `/__save` or `/__create`, updates source files, preserves unrelated
 front matter, and lets Eleventy's watcher rebuild the preview immediately.

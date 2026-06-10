@@ -2,12 +2,14 @@ import { test, expect } from "bun:test";
 import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { addFeature } from "../src/commands/add.ts";
 import { build } from "../src/commands/build.ts";
 import { initSite } from "../src/commands/init.ts";
 import { newContent } from "../src/commands/new.ts";
 import {
   createEditableSource,
   editFileParamForInputPath,
+  injectEditLink,
   readEditableSource,
   resolveEditableSourcePath,
   writeEditableSource,
@@ -83,6 +85,32 @@ test("browser create maps typed input to a draft source file", () => {
   const raw = readFileSync(join(dir, "src", "fresh-page.md"), "utf8");
   expect(raw).toContain("draft: true");
   expect(raw).toContain("# Fresh Page\n\nBrowser body.");
+});
+
+test("new link goes straight to the page editor when only pages are available", () => {
+  const dir = site();
+  const html = injectEditLink(dir, "<!doctype html><html><body></body></html>", {
+    inputPath: "./src/index.njk",
+    url: "/",
+  });
+
+  expect(html).toContain('/__new?type=page&amp;return=%2F');
+  expect(html).not.toContain('<details class="basepage-dev-new">');
+});
+
+test("new link offers enabled content types as editor destinations", () => {
+  const dir = site();
+  addFeature(dir, "blog");
+  const html = injectEditLink(dir, "<!doctype html><html><body></body></html>", {
+    inputPath: "./src/index.njk",
+    url: "/blog/",
+  });
+
+  expect(html).toContain('<details class="basepage-dev-new">');
+  expect(html).toContain("New Post");
+  expect(html).toContain("New Page");
+  expect(html).toContain('/__new?type=post&amp;return=%2Fblog%2F');
+  expect(html).toContain('/__new?type=page&amp;return=%2Fblog%2F');
 });
 
 test("normal builds do not include serve-only edit links", async () => {
