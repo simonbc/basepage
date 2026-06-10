@@ -49,8 +49,12 @@ export async function createEleventy(siteDir: string, opts: EleventyOptions = {}
 function applyUrlFilters(cfg: any, pathPrefix = "/"): void {
   // Basepage owns path-prefixing so scaffold templates keep using Eleventy's
   // legacy `url` filter without getting double-prefixed by Eleventy v3's HTML
-  // Base transform. Non-HTML virtual templates like Atom feeds use this filter.
+  // Base transform. Non-HTML virtual templates like feeds use this filter.
   cfg.addFilter("basepageUrl", (url = "") => prefixUrl(url, pathPrefix));
+  cfg.addFilter("jsonStringify", (value: unknown) => JSON.stringify(value ?? ""));
+  cfg.addFilter("xmlEscape", xmlEscape);
+  cfg.addFilter("cdata", cdata);
+  cfg.addFilter("basepageDateToRfc822", dateToRfc822);
 }
 
 function applyHtmlPathPrefix(cfg: any, pathPrefix = "/"): void {
@@ -121,10 +125,14 @@ async function applyFeatures(cfg: any, manifest: Manifest): Promise<void> {
   if (features.has("rss")) {
     const rss = await import("@11ty/eleventy-plugin-rss");
     cfg.addPlugin(rss.default ?? rss);
-    // A virtual feed template — kept out of the scaffold so the site stays
+    // Virtual feed templates — kept out of the scaffold so the site stays
     // dependency-free; only present when the feature is on.
-    cfg.addTemplate("basepage-feed.njk", FEED_TEMPLATE, {
+    cfg.addTemplate("basepage-feed.njk", RSS_FEED_TEMPLATE, {
       permalink: "/feed.xml",
+      eleventyExcludeFromCollections: true,
+    });
+    cfg.addTemplate("basepage-json-feed.njk", JSON_FEED_TEMPLATE, {
+      permalink: "/feed.json",
       eleventyExcludeFromCollections: true,
     });
   }
@@ -143,28 +151,75 @@ async function applyFeatures(cfg: any, manifest: Manifest): Promise<void> {
 }
 
 /**
- * Atom feed rendered by Basepage when `rss` is enabled. Reads `site` (from the
+ * Feeds rendered by Basepage when `rss` is enabled. Reads `site` (from the
  * scaffold's `_data/site.js`) and `collections.posts`. Absolute URLs are formed
  * from `site.domain` when present; otherwise links are root-relative.
  */
-const FEED_TEMPLATE = `<?xml version="1.0" encoding="utf-8"?>
+const RSS_FEED_TEMPLATE = `<?xml version="1.0" encoding="utf-8"?>
 {%- set origin = ("https://" + site.domain) if site.domain else "" -%}
-<feed xmlns="http://www.w3.org/2005/Atom">
-  <title>{{ site.title }}</title>
-  {%- if site.tagline %}<subtitle>{{ site.tagline }}</subtitle>{% endif %}
-  <link href="{{ origin }}{{ '/feed.xml' | basepageUrl }}" rel="self"/>
-  <link href="{{ origin }}{{ '/' | basepageUrl }}"/>
-  <id>{{ origin }}{{ '/' | basepageUrl }}</id>
+{%- set homeUrl = origin + ('/' | basepageUrl) -%}
+{%- set feedUrl = origin + ('/feed.xml' | basepageUrl) -%}
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>{{ site.title | xmlEscape }}</title>
+    <link>{{ homeUrl | xmlEscape }}</link>
+    <description>{{ (site.tagline or site.title) | xmlEscape }}</description>
+    <generator>Basepage</generator>
+    <atom:link href="{{ feedUrl | xmlEscape }}" rel="self" type="application/rss+xml"/>
   {%- if collections.posts | length %}
-  <updated>{{ collections.posts | getNewestCollectionItemDate | dateToRfc3339 }}</updated>
+    <lastBuildDate>{{ collections.posts | getNewestCollectionItemDate | basepageDateToRfc822 }}</lastBuildDate>
   {%- endif %}
   {%- for post in collections.posts %}
-  <entry>
-    <title>{{ post.data.title }}</title>
-    <link href="{{ origin }}{{ post.url | basepageUrl }}"/>
-    <updated>{{ post.date | dateToRfc3339 }}</updated>
-    <id>{{ origin }}{{ post.url | basepageUrl }}</id>
-    <content type="html">{{ post.templateContent | safe }}</content>
-  </entry>
+    {%- set postUrl = origin + (post.url | basepageUrl) %}
+    <item>
+      <title>{{ post.data.title | xmlEscape }}</title>
+      <link>{{ postUrl | xmlEscape }}</link>
+      <guid isPermaLink="true">{{ postUrl | xmlEscape }}</guid>
+      <pubDate>{{ post.date | basepageDateToRfc822 }}</pubDate>
+      <description>{{ post.templateContent | cdata | safe }}</description>
+    </item>
   {%- endfor %}
-</feed>`;
+  </channel>
+</rss>`;
+
+const JSON_FEED_TEMPLATE = `{%- set origin = ("https://" + site.domain) if site.domain else "" -%}
+{%- set homeUrl = origin + ('/' | basepageUrl) -%}
+{%- set feedUrl = origin + ('/feed.json' | basepageUrl) -%}
+{
+  "version": "https://jsonfeed.org/version/1.1",
+  "title": {{ site.title | jsonStringify | safe }},
+  {%- if site.tagline %}
+  "description": {{ site.tagline | jsonStringify | safe }},
+  {%- endif %}
+  "home_page_url": {{ homeUrl | jsonStringify | safe }},
+  "feed_url": {{ feedUrl | jsonStringify | safe }},
+  "items": [
+    {%- for post in collections.posts %}
+    {%- set postUrl = origin + (post.url | basepageUrl) %}
+    {
+      "id": {{ postUrl | jsonStringify | safe }},
+      "url": {{ postUrl | jsonStringify | safe }},
+      "title": {{ post.data.title | jsonStringify | safe }},
+      "content_html": {{ post.templateContent | jsonStringify | safe }},
+      "date_published": {{ (post.date | dateToRfc3339) | jsonStringify | safe }}
+    }{{ "," if not loop.last }}
+    {%- endfor %}
+  ]
+}`;
+
+function xmlEscape(value: unknown): string {
+  return String(value ?? "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#39;");
+}
+
+function cdata(value: unknown): string {
+  return `<![CDATA[${String(value ?? "").replaceAll("]]>", "]]]]><![CDATA[>")}]]>`;
+}
+
+function dateToRfc822(value: Date | string | number): string {
+  return new Date(value).toUTCString();
+}

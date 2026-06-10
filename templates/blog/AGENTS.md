@@ -21,9 +21,9 @@ src/
 
 - **A post is a markdown file** in `src/posts/`, named `YYYY-MM-DD-slug.md`, with
   `title` and `date` in its front matter. Create one with `basepage new post <slug>`.
-- The posts collection, `readableDate`/`isoDate` filters, and the `/feed.xml` Atom feed
-  come from the `blog`/`rss` features — they're injected at build time, not defined in
-  the scaffold config.
+- The posts collection, `readableDate`/`isoDate` filters, and the `/feed.xml` RSS feed
+  plus `/feed.json` JSON Feed come from the `blog`/`rss` features — they're injected
+  at build time, not defined in the scaffold config.
 - Always route internal links/assets through the `url` filter:
   `{{ '/css/style.css' | url }}`, `{{ post.url | url }}`.
 - Site metadata (title, tagline, domain) lives **only** in `basepage.json` (`site.*`).

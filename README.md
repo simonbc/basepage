@@ -69,7 +69,7 @@ Every project has a `basepage.json` declaring its kind and enabled features:
 
 The scaffold is dependency-free. Basepage runs its **own** bundled Eleventy against the
 site folder and injects the manifest's opt-in features at build time — the posts
-collection, date filters, the RSS feed, syntax highlighting, wikilinks/backlinks — so
+collection, date filters, RSS and JSON feeds, syntax highlighting, wikilinks/backlinks — so
 the scaffold never imports plugins. `basepage add <feature>` just flips a manifest flag
 (and drops in any presentation files); the build wiring is handled for you. The core
 pipeline stays fixed: scaffold → persist → generate → view → publish.
@@ -94,7 +94,7 @@ intent) chooses a richer starting point:
 
 - **blank** — one legible page, neutral tokenized CSS. The default canvas.
 - **personal** — a résumé-style homepage.
-- **blog** — posts + an RSS feed + a chronological index.
+- **blog** — posts + RSS/JSON feeds + a chronological index.
 - **wiki** — linked notes with `[[wikilinks]]` and automatic backlinks.
 
 Presets are deliberately understated **bones**, not finished looks — easy for the agent
