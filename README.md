@@ -41,6 +41,9 @@ bun run src/cli.ts <command>     # or, once linked: basepage <command>
 | --- | --- |
 | `basepage init [dir]` | Scaffold a new site with a structure (blank canvas by default). |
 | `basepage new <page\|post\|note> <name>` | Add content. |
+| `basepage capture <site> --title <s>` | Save stdin/body as a new page, post, or note in a registered site. |
+| `basepage search [site\|all] <query>` | Search markdown in the current site or registered sites. |
+| `basepage sites <add\|list\|default>` | Register sites in `~/.basepage/sites.json`. |
 | `basepage add <capability>` | Enable a capability/section (blog, wikilinks, rss, syntax-highlight). |
 | `basepage restructure <kind>` | Change an existing site's structure (blank\|personal\|blog\|wiki). |
 | `basepage serve [dir]` | Live preview with reload and browser authoring tools. |
@@ -49,7 +52,8 @@ bun run src/cli.ts <command>     # or, once linked: basepage <command>
 | `basepage unpublish [dir]` | Take the published site offline. |
 
 `init` flags: `--template <blank\|personal\|blog\|wiki>` `--title` `--tagline` `--domain` `--yes`
-`new` flags: `--title` `--dir`  ·  `serve` flags: `--port`  ·  `build` flags: `--output` `--pathprefix`
+`new` flags: `--title` `--dir` `--site`  ·  `capture` flags: `--to` `--type` `--title` `--body`
+`search` flags: `--site` `--semantic` `--limit`  ·  `serve` flags: `--port`  ·  `build` flags: `--output` `--pathprefix`
 
 ```bash
 # scaffold a blank canvas, make it a blog, write a post, preview
@@ -58,6 +62,33 @@ basepage add blog mysite
 basepage new post "first ascent" --dir mysite
 basepage serve mysite          # prints a localhost URL — edit in the browser or in src/
 ```
+
+## Registered Sites And Search
+
+Register sites once to use them from any working directory:
+
+```bash
+basepage sites add ~/sites/notes --as notes
+basepage sites add ~/sites/blog --as blog
+basepage sites default notes
+```
+
+The registry lives in `~/.basepage/sites.json` and stores paths plus cached metadata,
+not source content. Content stays in each site's `src/` folder.
+
+Once registered, commands can target sites by name:
+
+```bash
+basepage new note "git-backed history" --site notes
+printf "Summary text" | basepage capture notes --title "Meeting summary" --type note --body -
+basepage search notes "revision history"
+basepage search all "publishing tradeoffs" --semantic
+```
+
+Plain search matches title, path, and markdown body text. `--semantic` uses a local,
+zero-dependency ranking pass over tokens, stems, phrases, and character n-grams. It
+does not call an embedding API or write a vector database yet, but the command shape is
+ready for that later.
 
 ## How it works
 

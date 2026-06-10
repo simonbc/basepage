@@ -126,12 +126,12 @@ export function injectEditLink(siteDir: string, content: string, page: { inputPa
   }
   const widget = `<style>
 .basepage-dev-links{position:fixed;inset-block-start:.75rem;inset-inline-end:1.5rem;z-index:2147483647;display:flex;gap:.4rem;font:500 13px/1.2 var(--font-sans,var(--font,ui-sans-serif,system-ui,sans-serif))}
-.basepage-dev-links a,.basepage-dev-links summary{padding:.35rem .6rem;border:1px solid color-mix(in srgb,var(--border,#d8d8d8) 80%,transparent);border-radius:999px;background:color-mix(in srgb,var(--bg,Canvas) 88%,transparent);color:var(--muted,var(--text,CanvasText));text-decoration:none;box-shadow:0 1px 6px rgb(0 0 0/.08);backdrop-filter:blur(8px);cursor:pointer}
+.basepage-dev-links a,.basepage-dev-links summary{padding:.35rem .6rem;border:1px solid color-mix(in srgb,var(--border,#d8d8d8) 80%,transparent);border-radius:999px;background:color-mix(in srgb,var(--bg,Canvas) 88%,transparent);color:var(--muted,var(--text,CanvasText));text-decoration:none;backdrop-filter:blur(8px);cursor:pointer}
 .basepage-dev-links a:hover,.basepage-dev-links summary:hover{color:var(--accent,LinkText);border-color:var(--accent,LinkText)}
 .basepage-dev-new{position:relative}
 .basepage-dev-new summary{list-style:none}
 .basepage-dev-new summary::-webkit-details-marker{display:none}
-.basepage-dev-new-menu{position:absolute;inset-block-start:calc(100% + .35rem);inset-inline-end:0;display:grid;gap:.25rem;min-width:7.5rem;padding:.35rem;border:1px solid color-mix(in srgb,var(--border,#d8d8d8) 80%,transparent);border-radius:.6rem;background:var(--bg,Canvas);box-shadow:0 8px 24px rgb(0 0 0/.12)}
+.basepage-dev-new-menu{position:absolute;inset-block-start:calc(100% + .35rem);inset-inline-end:0;display:grid;gap:.25rem;min-width:7.5rem;padding:.35rem;border:1px solid color-mix(in srgb,var(--border,#d8d8d8) 80%,transparent);border-radius:.6rem;background:var(--bg,Canvas);box-shadow:0 2px 8px rgb(0 0 0/.06)}
 .basepage-dev-new:not([open]) .basepage-dev-new-menu{display:none}
 .basepage-dev-new-menu a{box-shadow:none;border:0;border-radius:.35rem;background:transparent;backdrop-filter:none}
 .basepage-dev-new-menu a:hover{background:color-mix(in srgb,var(--accent,LinkText) 10%,transparent)}
