@@ -6,6 +6,7 @@ import { build } from "../src/commands/build.ts";
 import { initSite } from "../src/commands/init.ts";
 import { newContent } from "../src/commands/new.ts";
 import {
+  createEditableSource,
   editFileParamForInputPath,
   readEditableSource,
   resolveEditableSourcePath,
@@ -66,10 +67,30 @@ test("edit file params are derived only from editable src inputs", () => {
   expect(editFileParamForInputPath(dir, "./src/css/style.css")).toBeNull();
 });
 
+test("browser create maps typed input to a draft source file", () => {
+  const dir = site();
+  const created = createEditableSource(dir, {
+    type: "page",
+    title: "Fresh Page",
+    slug: "../Fresh Page!",
+    body: "Browser body.",
+    draft: true,
+  });
+
+  expect(created.file).toBe("fresh-page.md");
+  expect(created.url).toBe("/fresh-page/");
+  expect(created.draft).toBe(true);
+  const raw = readFileSync(join(dir, "src", "fresh-page.md"), "utf8");
+  expect(raw).toContain("draft: true");
+  expect(raw).toContain("# Fresh Page\n\nBrowser body.");
+});
+
 test("normal builds do not include serve-only edit links", async () => {
   const dir = site();
   await build(dir);
   const html = readFileSync(join(dir, "_site", "index.html"), "utf8");
   expect(html).not.toContain("basepage-edit-link");
+  expect(html).not.toContain("basepage-dev-links");
   expect(html).not.toContain("/__edit");
+  expect(html).not.toContain("/__new");
 });

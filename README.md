@@ -43,7 +43,7 @@ bun run src/cli.ts <command>     # or, once linked: basepage <command>
 | `basepage new <page\|post\|note> <name>` | Add content. |
 | `basepage add <capability>` | Enable a capability/section (blog, wikilinks, rss, syntax-highlight). |
 | `basepage restructure <kind>` | Change an existing site's structure (blank\|personal\|blog\|wiki). |
-| `basepage serve [dir]` | Live preview with reload and browser edit links for markdown files. |
+| `basepage serve [dir]` | Live preview with reload and browser authoring tools. |
 | `basepage build [dir]` | Compile to `_site/`. |
 | `basepage publish [dir]` | Deploy to GitHub Pages. |
 | `basepage unpublish [dir]` | Take the published site offline. |
@@ -56,7 +56,7 @@ bun run src/cli.ts <command>     # or, once linked: basepage <command>
 basepage init mysite --title "Field Notes" --yes
 basepage add blog mysite
 basepage new post "first ascent" --dir mysite
-basepage serve mysite          # http://localhost:8080 — edit in the browser or in src/
+basepage serve mysite          # prints a localhost URL — edit in the browser or in src/
 ```
 
 ## How it works
@@ -76,16 +76,24 @@ pipeline stays fixed: scaffold → persist → generate → view → publish.
 
 ### Local editing
 
-`basepage serve` is also a tiny local editor. In serve mode only, Basepage injects an
-`Edit` link into every generated HTML page backed by a markdown source file under
-`src/`. The link opens a same-port editor at `/__edit` with a title field and markdown
-body. Saving submits to `/__save`, updates the source file, preserves all other front
-matter, and lets Eleventy's watcher rebuild the preview immediately. Template-backed
-pages like `src/index.njk` are not browser-editable.
+`basepage serve` is also a tiny local authoring UI. In serve mode only, Basepage
+injects local tools into generated HTML pages: `Edit` appears on pages backed by a
+markdown source file under `src/`, and `+ New` appears everywhere. `Edit` opens a
+same-port editor at `/__edit` with a title field, draft checkbox, and markdown body.
+`+ New` opens `/__new`, where you can create a page, post, or note depending on the
+site's enabled features. New browser-created content defaults to `draft: true`.
+
+Saving submits to `/__save` or `/__create`, updates source files, preserves unrelated
+front matter, and lets Eleventy's watcher rebuild the preview immediately.
+Template-backed pages like `src/index.njk` are not browser-editable, but they still
+offer `+ New`.
 
 The editor is never written into `basepage build` output, so published GitHub Pages
 sites stay plain static files. Saves are path-guarded and only existing `.md` files
 inside the site's `src/` directory can be written.
+
+`draft: true` content is visible in `basepage serve`, but excluded from `basepage build`
+and `basepage publish`. Uncheck `Draft` in the editor to publish it.
 
 ### Presets (`--template`)
 

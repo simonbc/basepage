@@ -35,6 +35,6 @@ AGENTS.md            This file.
 
 ## Commands (run by the human)
 
-- `basepage serve` — live preview at http://localhost:8080 with local Edit links for markdown files
+- `basepage serve` — live preview with local Edit/+ New tools for markdown content
 - `basepage build` — compile to `_site/`
 - `basepage publish` — deploy to their domain

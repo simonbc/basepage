@@ -21,8 +21,23 @@ test("new page creates a markdown file with title front matter", () => {
   const { path } = newContent({ siteDir: dir, type: "page", name: "About Me" });
   expect(path).toBe(join(dir, "src", "about-me.md"));
   const body = readFileSync(path, "utf8");
-  expect(body).toMatch(/title: About Me/);
+  expect(body).toContain('title: "About Me"');
   expect(body).toMatch(/layout: base.njk/);
+});
+
+test("new content can be created as a draft with an initial body", () => {
+  const dir = site("blank");
+  const { path } = newContent({
+    siteDir: dir,
+    type: "page",
+    name: "Draft Page",
+    title: "Draft Page",
+    body: "A private start.",
+    draft: true,
+  });
+  const body = readFileSync(path, "utf8");
+  expect(body).toContain("draft: true");
+  expect(body).toContain("# Draft Page\n\nA private start.");
 });
 
 test("new post requires a blog, with a helpful error", () => {
@@ -40,7 +55,7 @@ test("new post on a blog writes a dated file with title + date", () => {
   });
   expect(path).toBe(join(dir, "src", "posts", "2026-03-04-my-first-post.md"));
   const body = readFileSync(path, "utf8");
-  expect(body).toMatch(/title: My First Post/);
+  expect(body).toContain('title: "My First Post"');
   expect(body).toMatch(/date: 2026-03-04/);
 });
 
@@ -53,7 +68,7 @@ test("new note on a wiki writes into src/notes with a title", () => {
   const dir = site("wiki");
   const { path } = newContent({ siteDir: dir, type: "note", name: "My Idea" });
   expect(path).toBe(join(dir, "src", "notes", "my-idea.md"));
-  expect(readFileSync(path, "utf8")).toMatch(/title: My Idea/);
+  expect(readFileSync(path, "utf8")).toContain('title: "My Idea"');
 });
 
 test("refuses to overwrite an existing file", () => {

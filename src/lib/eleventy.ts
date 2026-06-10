@@ -37,6 +37,7 @@ export async function createEleventy(siteDir: string, opts: EleventyOptions = {}
       if (opts.port) cfg.setServerOptions({ port: opts.port });
       applyUrlFilters(cfg, opts.pathPrefix);
       applyHtmlPathPrefix(cfg, opts.pathPrefix);
+      applyDrafts(cfg, opts.runMode);
       if (opts.runMode === "serve") applyDevEditor(cfg, dir);
       await applyFeatures(cfg, manifest);
     },
@@ -74,6 +75,15 @@ function applyDevEditor(cfg: any, siteDir: string): void {
       inputPath: this.page?.inputPath ?? this.inputPath,
       url: this.page?.url ?? this.url,
     });
+  });
+}
+
+function applyDrafts(cfg: any, runMode: EleventyOptions["runMode"]): void {
+  if (runMode === "serve") return;
+
+  cfg.addPreprocessor("basepage-drafts", "*", (data: any, content: string) => {
+    if (data?.draft === true) return false;
+    return content;
   });
 }
 

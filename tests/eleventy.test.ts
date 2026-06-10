@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { initSite } from "../src/commands/init.ts";
 import { build } from "../src/commands/build.ts";
+import { newContent } from "../src/commands/new.ts";
 
 const cwd = process.cwd();
 afterEach(() => process.chdir(cwd));
@@ -80,4 +81,25 @@ test("blank kind builds a single page with no feed", async () => {
   expect(existsSync(join(dir, "_site", "index.html"))).toBe(true);
   expect(existsSync(join(dir, "_site", "feed.xml"))).toBe(false);
   expect(existsSync(join(dir, "_site", "feed.json"))).toBe(false);
+});
+
+test("draft markdown is excluded from normal builds", async () => {
+  const dir = join(tmp(), "site");
+  initSite({ dir, template: "blog", title: "Ada", domain: "ada.dev" });
+  newContent({
+    siteDir: dir,
+    type: "post",
+    name: "Private Thought",
+    title: "Private Thought",
+    body: "Not ready.",
+    date: new Date("2026-04-05T00:00:00Z"),
+    draft: true,
+  });
+
+  await build(dir);
+  expect(existsSync(join(dir, "_site", "posts", "2026-04-05-private-thought", "index.html"))).toBe(false);
+  const feed = readFileSync(join(dir, "_site", "feed.xml"), "utf8");
+  const jsonFeed = readFileSync(join(dir, "_site", "feed.json"), "utf8");
+  expect(feed).not.toContain("Private Thought");
+  expect(jsonFeed).not.toContain("Private Thought");
 });

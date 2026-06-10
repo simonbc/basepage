@@ -69,8 +69,8 @@ async function cmdInit(positionals: string[], flags: Record<string, string | boo
   console.log(`\n✓ Created a "${used}" basepage in ${rel}\n`);
   console.log("Next:");
   if (rel !== ".") console.log(`  cd ${rel}`);
-  console.log("  basepage serve     # live preview at http://localhost:8080");
-  console.log("  …edit src/ and src/css/style.css — the browser reloads as you go\n");
+  console.log("  basepage serve     # live preview; prints the localhost URL");
+  console.log("  …use Edit/+ New in the browser, or edit src/ directly\n");
 }
 
 /** Ask which kind of site to scaffold, looping until a valid choice. */
@@ -97,9 +97,9 @@ async function pickTemplate(rl: ReadlineInterface): Promise<string> {
 
 async function cmdServe(positionals: string[], flags: Record<string, string | boolean>) {
   const dir = resolve(positionals[0] ?? ".");
-  const port = flags.port ? Number(flags.port) : 8080;
+  const requestedPort = flags.port ? Number(flags.port) : undefined;
+  const { port } = await serve(dir, { port: requestedPort });
   console.log(`Serving ${relativeOrDot(dir)} at http://localhost:${port} — Ctrl-C to stop\n`);
-  await serve(dir, { port });
 }
 
 async function cmdBuild(positionals: string[], flags: Record<string, string | boolean>) {
@@ -180,7 +180,7 @@ Usage:
   basepage new <page|post|note> <name>   Add a page, post, or note
   basepage add <capability>  Enable a capability/section (${ADD_TARGETS.join(", ")})
   basepage restructure <kind>   Change the site's structure (blank|personal|blog|wiki)
-  basepage serve [dir]       Live preview with reload + local edit links
+  basepage serve [dir]       Live preview with reload + local authoring tools
   basepage build [dir]       Compile to _site/
   basepage publish [dir]     Deploy to GitHub Pages (browser sign-in, no keys)
   basepage unpublish [dir]   Take the published site offline
