@@ -9,7 +9,7 @@ import { build, formatBytes } from "./commands/build.ts";
 import { publish, unpublish } from "./commands/publish.ts";
 import { newContent } from "./commands/new.ts";
 import { searchSite, type SearchResult } from "./commands/search.ts";
-import { indexSite, searchSemanticIndex } from "./commands/index.ts";
+import { indexSite, refreshSemanticIndexIfReady, searchSemanticIndex } from "./commands/index.ts";
 import { addFeature, ADD_TARGETS } from "./commands/add.ts";
 import { restructure } from "./commands/restructure.ts";
 import { autoRegisterSite, basepageHome, readRegistry, setDefaultSite } from "./lib/basepage-home.ts";
@@ -159,8 +159,10 @@ async function cmdNew(positionals: string[], flags: Record<string, string | bool
     throw new Error("Usage: basepage new <page|post|note> <name>");
   }
   if (!name) throw new Error(`Usage: basepage new ${type} <name>`);
-  const dir = resolveSiteDir({ site: str(flags.site), dir: str(flags.dir) });
+  const site = str(flags.site);
+  const dir = resolveSiteDir({ site, dir: str(flags.dir) });
   const { path } = newContent({ siteDir: dir, type, name, title: str(flags.title) });
+  await refreshSemanticIndexIfReady({ site, siteDir: dir });
   console.log(`✓ Created ${relativeOrDot(path)}`);
 }
 
@@ -176,6 +178,7 @@ async function cmdCapture(positionals: string[], flags: Record<string, string | 
   const body = bodyFlag === "-" || bodyFlag === undefined ? await readStdinIfAvailable() : bodyFlag;
   const dir = resolveSiteDir({ site: to });
   const { path } = newContent({ siteDir: dir, type, name: str(flags.name) || title, title, body });
+  await refreshSemanticIndexIfReady({ site: to, siteDir: dir });
   console.log(`✓ Captured ${type} in ${relativeOrDot(path)}`);
 }
 

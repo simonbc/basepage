@@ -2,6 +2,7 @@ import { existsSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { extname, isAbsolute, relative, resolve, sep } from "node:path";
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { newContent, slugify, type NewType } from "../commands/new.ts";
+import { refreshSemanticIndexIfReady } from "../commands/index.ts";
 import { readManifest } from "./manifest.ts";
 
 const MAX_SAVE_BYTES = 1024 * 1024;
@@ -167,6 +168,7 @@ export function createDevEditorMiddleware(siteDir: string) {
         const draft = form.get("draft") === "true";
         const returnTo = safeReturnPath(form.get("return"));
         writeEditableSource(siteDir, file, title, body, draft);
+        await refreshSemanticIndexIfReady({ siteDir });
         res.statusCode = 303;
         res.setHeader("Location", returnTo);
         res.end();
@@ -183,6 +185,7 @@ export function createDevEditorMiddleware(siteDir: string) {
           date: form.get("date") ?? "",
           draft: form.get("draft") === "true",
         });
+        await refreshSemanticIndexIfReady({ siteDir });
         const params = new URLSearchParams({ file: created.file, return: created.url });
         res.statusCode = 303;
         res.setHeader("Location", `/__edit?${params.toString()}`);

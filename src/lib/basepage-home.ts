@@ -101,6 +101,15 @@ export function resolveDefaultSite(home = basepageHome()): RegisteredSite | null
   return alias ? registry.sites[alias] ?? null : null;
 }
 
+export function findRegisteredSiteAlias(siteDir: string, home = basepageHome()): string | null {
+  const dir = resolve(siteDir);
+  const registry = readRegistry(home);
+  for (const [alias, site] of Object.entries(registry.sites)) {
+    if (resolve(site.path) === dir) return alias;
+  }
+  return null;
+}
+
 export function normalizeAlias(value: string): string {
   return value.trim().toLowerCase().replace(/[^a-z0-9._-]+/g, "-").replace(/^-+|-+$/g, "");
 }

@@ -1,11 +1,11 @@
-import { mkdirSync } from "node:fs";
+import { existsSync, mkdirSync } from "node:fs";
 import { createHash } from "node:crypto";
 import { join } from "node:path";
 import { PGlite } from "@electric-sql/pglite";
 import { vector } from "@electric-sql/pglite-pgvector";
 import { collectDocuments, toSearchResult, type SearchDocument, type SearchResult } from "./search.ts";
-import { basepageHome } from "../lib/basepage-home.ts";
-import { createEmbeddingProvider, type EmbeddingProvider } from "../lib/embeddings.ts";
+import { basepageHome, findRegisteredSiteAlias } from "../lib/basepage-home.ts";
+import { createEmbeddingProvider, createLocalEmbeddingProvider, type EmbeddingProvider } from "../lib/embeddings.ts";
 
 export interface IndexOptions {
   site: string;
@@ -30,6 +30,13 @@ export interface SemanticIndexSearchOptions {
   limit?: number;
 }
 
+export interface RefreshIndexOptions {
+  site?: string;
+  siteDir: string;
+  home?: string;
+  provider?: EmbeddingProvider;
+}
+
 interface Chunk {
   path: string;
   title: string;
@@ -45,6 +52,10 @@ interface Row {
   url: string;
   text: string;
   score: number;
+}
+
+interface ModelRow {
+  model: string;
 }
 
 export async function indexSite(opts: IndexOptions): Promise<IndexResult> {
@@ -90,6 +101,23 @@ export async function indexSite(opts: IndexOptions): Promise<IndexResult> {
   }
 
   return { db: dbPath, site: opts.site, model: provider.model, files: docs.length, chunks: chunks.length };
+}
+
+export async function refreshSemanticIndexIfReady(opts: RefreshIndexOptions): Promise<IndexResult | null> {
+  const home = opts.home ?? basepageHome();
+  if (!existsSync(semanticDbPath(home))) return null;
+
+  const site = opts.site ?? findRegisteredSiteAlias(opts.siteDir, home);
+  if (!site) return null;
+
+  const provider = opts.provider ?? await inferExistingProvider(site, home);
+  if (!provider) return null;
+
+  try {
+    return await indexSite({ site, siteDir: opts.siteDir, home, provider });
+  } catch {
+    return null;
+  }
 }
 
 export async function searchSemanticIndex(opts: SemanticIndexSearchOptions): Promise<SearchResult[]> {
@@ -232,4 +260,28 @@ function vectorLiteral(values: number[]): string {
     if (!Number.isFinite(value)) throw new Error("Embedding provider returned a non-finite vector value.");
     return value;
   }).join(",")}]`;
+}
+
+async function inferExistingProvider(site: string, home: string): Promise<EmbeddingProvider | null> {
+  try {
+    return createEmbeddingProvider();
+  } catch {
+    // If no provider is configured, an existing local index can refresh itself.
+  }
+
+  const db = await openSemanticDb(home);
+  try {
+    const rows = (await db.query<ModelRow>(
+      "select distinct model from chunks where site = $1 order by model asc",
+      [site],
+    )).rows;
+    const localModels = rows.map((row) => row.model).filter((model) => model.startsWith("local:"));
+    if (localModels.length !== 1) return null;
+
+    const dimensions = Number(localModels[0].slice("local:".length));
+    if (!Number.isInteger(dimensions) || dimensions <= 0) return null;
+    return createLocalEmbeddingProvider({ BASEPAGE_LOCAL_EMBEDDING_DIMS: String(dimensions) });
+  } finally {
+    await db.close();
+  }
 }

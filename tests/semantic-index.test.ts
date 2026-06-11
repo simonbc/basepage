@@ -3,10 +3,11 @@ import { existsSync, mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { addFeature } from "../src/commands/add.ts";
-import { indexSite, searchSemanticIndex } from "../src/commands/index.ts";
+import { indexSite, refreshSemanticIndexIfReady, searchSemanticIndex } from "../src/commands/index.ts";
 import { initSite } from "../src/commands/init.ts";
 import { newContent } from "../src/commands/new.ts";
-import type { EmbeddingProvider } from "../src/lib/embeddings.ts";
+import { autoRegisterSite } from "../src/lib/basepage-home.ts";
+import { createLocalEmbeddingProvider, type EmbeddingProvider } from "../src/lib/embeddings.ts";
 
 const provider: EmbeddingProvider = {
   model: "test:keywords",
@@ -82,4 +83,30 @@ test("semantic search returns each page once when a page has multiple matching c
 
   const results = await searchSemanticIndex({ site: "notes", query: "alpha", home, provider: keywordProvider });
   expect(results.map((result) => result.file)).toEqual(["long.md"]);
+});
+
+test("refreshes an existing local semantic index after content changes", async () => {
+  const root = mkdtempSync(join(tmpdir(), "bp-index-refresh-"));
+  const home = join(root, "home");
+  const dir = join(root, "site");
+  initSite({ dir, template: "wiki", title: "Index" });
+  autoRegisterSite(dir, { home });
+
+  const localProvider = createLocalEmbeddingProvider({ BASEPAGE_LOCAL_EMBEDDING_DIMS: "16" });
+  await indexSite({ site: "site", siteDir: dir, home, provider: localProvider });
+
+  newContent({
+    siteDir: dir,
+    type: "note",
+    name: "browser-edits",
+    title: "Browser Edits",
+    body: "Automatic refresh keeps browser edits searchable.",
+  });
+
+  const refreshed = await refreshSemanticIndexIfReady({ siteDir: dir, home });
+  expect(refreshed?.site).toBe("site");
+  expect(refreshed?.model).toBe("local:16");
+
+  const results = await searchSemanticIndex({ site: "site", query: "browser edits searchable", home, provider: localProvider });
+  expect(results[0].title).toBe("Browser Edits");
 });

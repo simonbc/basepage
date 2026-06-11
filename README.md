@@ -117,6 +117,12 @@ indexing. If no provider is configured, `basepage search --semantic` falls back 
 Basepage's local zero-dependency ranking pass, so agents can still search notes
 without network access.
 
+Once a site has a semantic index, content writes refresh it automatically when
+Basepage can use the same provider. `basepage new`, `basepage capture`, and the
+local browser editor all re-index after saving. Existing `local` indexes can refresh
+without environment variables; hosted providers need their API key available in the
+current process.
+
 ## How it works
 
 Every project has a `basepage.json` declaring its kind and enabled features:

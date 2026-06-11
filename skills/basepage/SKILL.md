@@ -89,6 +89,11 @@ The embedding backend is provider-neutral. Use `BASEPAGE_EMBEDDING_PROVIDER` wit
 `BASEPAGE_OLLAMA_HOST`, or localhost. If no provider is configured,
 `search --semantic` falls back to local token/phrase ranking.
 
+After the first `basepage index <site>`, content writes refresh the existing index
+automatically. This applies to `basepage new`, `basepage capture`, and browser
+editor saves/creates. Existing `local` indexes refresh without env vars; hosted
+providers need their API key available.
+
 ## Preset routing (intent → `--template`)
 
 | User wants… | `--template` |
