@@ -17,7 +17,7 @@ test("never targets the user's primary <login>.github.io repo", () => {
   expect(plan.pathPrefix).not.toBe("/");
 });
 
-test("apex domain → repo named after the domain, root path, 4 A records", () => {
+test("apex domain → repo named after the domain, root path, A and AAAA records", () => {
   const plan = planPublish({ login: "ada", folderName: "site", domain: "ada.dev" });
   expect(plan.repo).toBe("ada.dev");
   expect(plan.pathPrefix).toBe("/");
@@ -29,13 +29,20 @@ test("apex domain → repo named after the domain, root path, 4 A records", () =
     "185.199.110.153",
     "185.199.111.153",
   ]);
+  expect(plan.dns?.filter((r) => r.type === "AAAA").map((r) => r.value)).toEqual([
+    "2606:50c0:8000::153",
+    "2606:50c0:8001::153",
+    "2606:50c0:8002::153",
+    "2606:50c0:8003::153",
+  ]);
   expect(plan.dns?.every((r) => r.host === "@")).toBe(true);
 });
 
-test("multi-part public suffix apex domains use A records", () => {
+test("multi-part public suffix apex domains use apex records", () => {
   const plan = planPublish({ login: "ada", folderName: "site", domain: "example.co.uk" });
   expect(plan.cname).toBe("example.co.uk");
   expect(plan.dns?.filter((r) => r.type === "A")).toHaveLength(4);
+  expect(plan.dns?.filter((r) => r.type === "AAAA")).toHaveLength(4);
   expect(plan.dns?.every((r) => r.host === "@")).toBe(true);
 });
 

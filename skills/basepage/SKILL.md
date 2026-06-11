@@ -56,8 +56,10 @@ sections and **`new`** content onto it. Three verbs, three jobs — don't confus
    and CSS live-reload. Serve mode also injects local-only `Edit`/`+ New` tools for
    markdown pages/posts/notes. Use this to check your work.
 5. **Publish** when the user approves: `basepage publish` (browser sign-in, no API
-   keys — it reuses the GitHub CLI login if present). Set a `domain` in `basepage.json`
-   first for a custom domain.
+   keys — it reuses the GitHub CLI login if present). For a custom domain, run
+   `basepage domain set <domain>` first, or use `basepage publish --domain <domain>`;
+   then run `basepage domain check` to verify registrar DNS. Use `--site <name>` when
+   publishing or checking a remembered site from another working directory.
 
 ## Working across sites
 
@@ -141,8 +143,8 @@ src/
 - The `basepage` command should be on PATH (installed via `bun link`). If it isn't,
   run it as `bun run <path-to-basepage>/src/cli.ts <args>`.
 - Wiki `[[wikilinks]]` render root-relative, so a wiki publishes cleanly to a custom
-  domain or runs locally; set a `domain` before publishing a wiki (a no-domain GitHub
-  project sub-path would break in-content wikilinks).
+  domain or runs locally; run `basepage domain set <domain>` before publishing a wiki
+  (a no-domain GitHub project sub-path would break in-content wikilinks).
 - Publish is human-gated: preview with `serve`, get the user's OK, then `publish`.
 - Browser editing is local-only: `serve` injects the links and handles `/__edit`,
   `/__save`, `/__new`, and `/__create`; `build`/`publish` output stays plain static

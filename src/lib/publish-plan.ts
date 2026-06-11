@@ -1,15 +1,23 @@
 import { parse } from "tldts";
 
 /** GitHub Pages' apex A-record IPs. */
-export const GITHUB_PAGES_IPS = [
+export const GITHUB_PAGES_A_RECORDS = [
   "185.199.108.153",
   "185.199.109.153",
   "185.199.110.153",
   "185.199.111.153",
 ];
 
+/** GitHub Pages' apex AAAA-record IPs. */
+export const GITHUB_PAGES_AAAA_RECORDS = [
+  "2606:50c0:8000::153",
+  "2606:50c0:8001::153",
+  "2606:50c0:8002::153",
+  "2606:50c0:8003::153",
+];
+
 export interface DnsRecord {
-  type: "A" | "CNAME";
+  type: "A" | "AAAA" | "CNAME";
   /** Host/name field as the registrar expects it (`@` for apex). */
   host: string;
   value: string;
@@ -40,12 +48,13 @@ export function sanitizeRepoName(input: string): string {
   return cleaned || "site";
 }
 
-function hostOf(domain: string): string {
+export function hostOf(domain: string): string {
   return domain
     .replace(/^https?:\/\//, "")
     .replace(/\/.*$/, "")
     .trim()
-    .toLowerCase();
+    .toLowerCase()
+    .replace(/\.$/, "");
 }
 
 /** Apex (e.g. `ada.dev`, `example.co.uk`) vs subdomain (`www.ada.dev`). */
@@ -67,7 +76,10 @@ export function planPublish(opts: { login: string; folderName: string; domain?: 
   if (opts.domain && hostOf(opts.domain)) {
     const host = hostOf(opts.domain);
     const dns: DnsRecord[] = isApexDomain(host)
-      ? GITHUB_PAGES_IPS.map((value) => ({ type: "A", host: "@", value }))
+      ? [
+          ...GITHUB_PAGES_A_RECORDS.map((value) => ({ type: "A" as const, host: "@", value })),
+          ...GITHUB_PAGES_AAAA_RECORDS.map((value) => ({ type: "AAAA" as const, host: "@", value })),
+        ]
       : [{ type: "CNAME", host: dnsHostForSubdomain(host), value: `${login}.github.io` }];
     return {
       repo: sanitizeRepoName(host),

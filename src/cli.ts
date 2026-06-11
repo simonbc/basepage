@@ -7,6 +7,7 @@ import { initSite } from "./commands/init.ts";
 import { serve } from "./commands/serve.ts";
 import { build, formatBytes } from "./commands/build.ts";
 import { publish, unpublish } from "./commands/publish.ts";
+import { checkDomain, setDomain, type DomainCheckResult } from "./commands/domain.ts";
 import { newContent } from "./commands/new.ts";
 import { searchSite, type SearchResult } from "./commands/search.ts";
 import { indexSite, refreshSemanticIndexIfReady, searchSemanticIndex } from "./commands/index.ts";
@@ -130,20 +131,64 @@ async function cmdBuild(positionals: string[], flags: Record<string, string | bo
   console.log(`✓ Built ${fileCount} files (${formatBytes(bytes)}) to ${relativeOrDot(output)}`);
 }
 
-async function cmdPublish(positionals: string[]) {
-  const dir = resolve(positionals[0] ?? ".");
-  const { url, plan, repoCreated } = await publish(dir);
+async function cmdPublish(positionals: string[], flags: Record<string, string | boolean>) {
+  const dir = resolveSiteDir({ site: str(flags.site), dir: positionals[0] });
+  const domain = str(flags.domain);
+  if (domain) {
+    const result = setDomain(dir, domain);
+    console.log(`✓ Domain set to ${result.domain}`);
+  }
 
-  console.log(`\n✓ Published to ${url}`);
-  if (repoCreated) console.log("  (first deploy can take a minute to go live)");
+  const { url, plan, repoCreated, login } = await publish(dir);
 
   if (plan.dns && plan.cname) {
-    console.log(`\nTo point ${plan.cname} at GitHub, add these DNS records at your registrar:`);
+    console.log(`\n✓ Published the GitHub Pages deploy for ${plan.cname}`);
+    console.log(`  Repo: https://github.com/${login}/${plan.repo}`);
+    if (repoCreated) console.log("  First deploys can take a minute to finish on GitHub.");
+    console.log(`\n${url} will not work until DNS points at GitHub Pages.`);
+    console.log("Add these DNS records at your registrar:");
     for (const r of plan.dns) {
       console.log(`  ${r.type.padEnd(5)} ${r.host.padEnd(6)} ${r.value}`);
     }
-    console.log("\nThe site is live at the github.io URL now; the custom domain works once DNS propagates.");
+    try {
+      const check = await checkDomain(dir, { domain: plan.cname, login });
+      printPublishDomainStatus(check);
+    } catch {
+      console.log("\nDNS status could not be checked automatically.");
+    }
+    console.log("\nNext:");
+    console.log("  1. Add/update the DNS records above.");
+    console.log("  2. Wait for DNS to propagate.");
+    console.log("  3. Run `basepage domain check` to confirm the domain is ready.");
+    return;
   }
+
+  console.log(`\n✓ Published to ${url}`);
+  if (repoCreated) console.log("  First deploys can take a minute to finish on GitHub.");
+}
+
+async function cmdDomain(positionals: string[], flags: Record<string, string | boolean>) {
+  const subcommand = positionals[0] || "check";
+
+  if (subcommand === "set") {
+    const domain = positionals[1];
+    if (!domain) throw new Error("Usage: basepage domain set <domain> [dir]");
+    const dir = resolveSiteDir({ site: str(flags.site), dir: positionals[2] });
+    const result = setDomain(dir, domain);
+    console.log(`✓ Domain set to ${result.domain}`);
+    console.log(`Run \`basepage domain check\` after updating DNS.`);
+    return;
+  }
+
+  if (subcommand === "check") {
+    const domainArg = positionals[1] && looksLikeDomain(positionals[1]) ? positionals[1] : undefined;
+    const dir = resolveSiteDir({ site: str(flags.site), dir: positionals[domainArg ? 2 : 1] });
+    const result = await checkDomain(dir, { domain: domainArg, login: str(flags.login) });
+    printDomainCheck(result);
+    return;
+  }
+
+  throw new Error("Usage: basepage domain <set|check> [domain] [dir]");
 }
 
 async function cmdUnpublish(positionals: string[]) {
@@ -280,6 +325,47 @@ function relativeOrDot(target: string): string {
   return rel === "" ? "." : rel;
 }
 
+function looksLikeDomain(input: string): boolean {
+  return /^https?:\/\//.test(input) || (/^[^/\\]+$/.test(input) && input.includes("."));
+}
+
+function printDomainCheck(result: DomainCheckResult): void {
+  console.log(`DNS check for ${result.domain}`);
+  for (const check of result.checks) {
+    const label = `${check.type.padEnd(5)} ${check.host}`;
+    const actual = check.actual.length ? check.actual.join(", ") : "(none)";
+    const expected = check.expected.length
+      ? check.expected.join(", ")
+      : "any *.github.io CNAME (pass --login <github-user> for an exact check)";
+    console.log(`  ${check.ok ? "✓" : "✗"} ${label}`);
+    console.log(`    actual:   ${actual}`);
+    console.log(`    expected: ${expected}`);
+  }
+
+  if (result.ok) {
+    console.log("\n✓ DNS is ready for GitHub Pages.");
+    return;
+  }
+
+  console.log("\nAdd/update these DNS records at your registrar:");
+  for (const r of result.instructions) {
+    console.log(`  ${r.type.padEnd(5)} ${r.host.padEnd(6)} ${r.value}`);
+  }
+}
+
+function printPublishDomainStatus(result: DomainCheckResult): void {
+  if (result.ok) {
+    console.log("\n✓ DNS already points at GitHub Pages.");
+    return;
+  }
+
+  console.log("\nDNS is not ready yet. Current records:");
+  for (const check of result.checks) {
+    const actual = check.actual.length ? check.actual.join(", ") : "(none)";
+    console.log(`  ${check.type.padEnd(5)} ${check.host.padEnd(6)} ${actual}`);
+  }
+}
+
 async function readStdinIfAvailable(): Promise<string> {
   if (stdin.isTTY) return "";
   const chunks: Buffer[] = [];
@@ -329,6 +415,7 @@ Usage:
   basepage search [site|all] <query>      Search remembered or current-site markdown
   basepage index [site|all]               Build the local embedding index
   basepage sites <list|default>           Show remembered sites or set the default
+  basepage domain <set|check> [domain]    Set or verify a custom domain
   basepage add <capability>  Enable a capability/section (${ADD_TARGETS.join(", ")})
   basepage restructure <kind>   Change the site's structure (blank|personal|blog|wiki)
   basepage serve [dir]       Live preview with reload + local authoring tools
@@ -341,8 +428,10 @@ new flags:    --title <s>  --dir <dir>  --site <name>
 capture flags: --to <name>  --type <note|post|page>  --title <s>  --body <s|->
 search flags: --site <name>  --semantic  --limit <n>
 index env:    BASEPAGE_EMBEDDING_PROVIDER=<voyage|openai|ollama|local>  BASEPAGE_EMBEDDING_MODEL=<model>
+domain flags: --login <github-user>  --site <name>
 serve flags:  --port <n>
 build flags:  --output <dir>  --pathprefix </repo/>
+publish flags: --domain <domain>  --site <name>
 `);
 }
 
@@ -366,6 +455,8 @@ async function main() {
       return cmdCapture(positionals, flags);
     case "sites":
       return cmdSites(positionals, flags);
+    case "domain":
+      return cmdDomain(positionals, flags);
     case "search":
       return cmdSearch(positionals, flags);
     case "index":
@@ -375,7 +466,7 @@ async function main() {
     case "restructure":
       return cmdRestructure(positionals);
     case "publish":
-      return cmdPublish(positionals);
+      return cmdPublish(positionals, flags);
     case "unpublish":
       return cmdUnpublish(positionals);
     default:

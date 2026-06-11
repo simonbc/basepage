@@ -47,6 +47,7 @@ bun run src/cli.ts <command>     # or, once linked: basepage <command>
 | `basepage search [site\|all] <query>` | Search markdown in the current site or remembered sites. |
 | `basepage index [site\|all]` | Build the local embedding index for semantic search. |
 | `basepage sites <list\|default>` | Show remembered sites or set the default. |
+| `basepage domain <set\|check> [domain]` | Set or verify a custom domain. |
 | `basepage add <capability>` | Enable a capability/section (blog, wikilinks, rss, syntax-highlight). |
 | `basepage restructure <kind>` | Change an existing site's structure (blank\|personal\|blog\|wiki). |
 | `basepage serve [dir]` | Live preview with reload and browser authoring tools. |
@@ -56,7 +57,8 @@ bun run src/cli.ts <command>     # or, once linked: basepage <command>
 
 `init` flags: `--template <blank\|personal\|blog\|wiki>` `--title` `--tagline` `--domain` `--yes`
 `new` flags: `--title` `--dir` `--site`  ·  `capture` flags: `--to` `--type` `--title` `--body`
-`search` flags: `--site` `--semantic` `--limit`  ·  `index` env: `BASEPAGE_EMBEDDING_PROVIDER` `BASEPAGE_EMBEDDING_MODEL`  ·  `serve` flags: `--port`  ·  `build` flags: `--output` `--pathprefix`
+`search` flags: `--site` `--semantic` `--limit`  ·  `domain` flags: `--site` `--login`  ·  `publish` flags: `--site` `--domain`
+`index` env: `BASEPAGE_EMBEDDING_PROVIDER` `BASEPAGE_EMBEDDING_MODEL`  ·  `serve` flags: `--port`  ·  `build` flags: `--output` `--pathprefix`
 
 ```bash
 # scaffold a blank canvas, make it a blog, write a post, preview
@@ -185,9 +187,16 @@ token if you're already logged in), caching the result in `~/.basepage/token`.
 
 - **No domain** → a project repo named after the folder, served at
   `<you>.github.io/<repo>/` (built with `--pathprefix=/<repo>/`).
-- **Custom domain** (set `domain` in `basepage.json`) → a repo named after the domain,
-  a `CNAME` file, the Pages custom domain set, and the registrar DNS records printed
-  (apex → four A records; subdomain → a CNAME).
+- **Custom domain** (`basepage domain set simonbc.com`, or one-shot
+  `basepage publish --domain simonbc.com`) → a repo named after the domain, a
+  `CNAME` file, the Pages custom domain set, and registrar DNS guidance printed
+  (apex → A + AAAA records; subdomain → a CNAME). Use `--site <name>` from any
+  working directory to target a remembered site.
+
+Use `basepage domain check` to verify DNS before or after publishing. For subdomains,
+pass `--login <github-user>` to check the exact CNAME target. A custom-domain publish
+means the GitHub repo and Pages deploy are ready; the domain itself is not reachable
+until the registrar DNS records match.
 
 The build is pushed to a `gh-pages` branch (`main` stays the default branch).
 `basepage unpublish` removes that branch to take the site offline; the repo is kept.
