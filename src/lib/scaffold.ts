@@ -74,7 +74,7 @@ export function resolveTemplateChoice(
 
 function isEmptyDir(dir: string): boolean {
   if (!existsSync(dir)) return true;
-  return readdirSync(dir).length === 0;
+  return readdirSync(dir).every((entry) => entry === ".git");
 }
 
 /**

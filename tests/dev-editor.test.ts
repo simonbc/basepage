@@ -123,6 +123,7 @@ test("new link goes straight to the page editor when only pages are available", 
   });
 
   expect(html).toContain('/__new?type=page&amp;return=%2F');
+  expect(html).toContain("/__revisions");
   expect(html).not.toContain('<details class="basepage-dev-new">');
 });
 

@@ -4,6 +4,7 @@ import { readManifest } from "../lib/manifest.ts";
 import { ensureToken } from "../lib/github-auth.ts";
 import { GitHub } from "../lib/github.ts";
 import { pushDirToBranch } from "../lib/git.ts";
+import { commitSiteChanges, ensureSiteHistory, pushSourceRepo } from "../lib/site-history.ts";
 import { planPublish, type PublishPlan } from "../lib/publish-plan.ts";
 import { build } from "./build.ts";
 
@@ -12,6 +13,7 @@ export interface PublishResult {
   plan: PublishPlan;
   repoCreated: boolean;
   login: string;
+  sourcePushed: boolean;
 }
 
 export interface PublishDeps {
@@ -40,6 +42,8 @@ export async function publish(siteDir: string, deps: PublishDeps = {}): Promise<
   log(`  ✓ ${login}${source === "gh" ? " (via GitHub CLI)" : ""}`);
 
   const plan = planPublish({ login, folderName: basename(dir), domain: manifest.domain });
+  ensureSiteHistory(dir);
+  commitSiteChanges(dir, "Publish source");
 
   log(`Building (${plan.pathPrefix})…`);
   const result = await build(dir, { pathPrefix: plan.pathPrefix, clean: true });
@@ -52,6 +56,22 @@ export async function publish(siteDir: string, deps: PublishDeps = {}): Promise<
   log(`Preparing repo ${login}/${plan.repo}…`);
   const { created } = await gh.ensureRepo(login, plan.repo);
   log(created ? "  ✓ created" : "  ✓ exists");
+
+  let sourcePushed = false;
+  try {
+    log("Pushing source to main…");
+    pushSourceRepo({
+      siteDir: dir,
+      owner: login,
+      repo: plan.repo,
+      branch: "main",
+      token,
+    });
+    sourcePushed = true;
+    log("  ✓ source pushed");
+  } catch (err) {
+    log(`  ! source push skipped: ${err instanceof Error ? err.message : err}`);
+  }
 
   log(`Pushing to ${plan.branch}…`);
   pushDirToBranch({
@@ -70,7 +90,7 @@ export async function publish(siteDir: string, deps: PublishDeps = {}): Promise<
   await gh.configurePages(login, plan.repo, plan.branch, plan.cname);
   log("  ✓ enabled");
 
-  return { url: plan.url, plan, repoCreated: created, login };
+  return { url: plan.url, plan, repoCreated: created, login, sourcePushed };
 }
 
 /** Take a published site offline by disabling its Pages site. */

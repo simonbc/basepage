@@ -2,6 +2,7 @@ import { readFileSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { manifestPath, readManifest } from "../lib/manifest.ts";
 import { listTemplates, TEMPLATES_DIR } from "../lib/scaffold.ts";
+import { commitSiteChanges } from "../lib/site-history.ts";
 import { ensureBlogScaffold, ensureWikiScaffold } from "./add.ts";
 
 export interface RestructureResult {
@@ -44,6 +45,7 @@ export function restructure(siteDir: string, kind: string): RestructureResult {
 
   raw.features = [...features];
   writeFileSync(file, JSON.stringify(raw, null, 2) + "\n");
+  commitSiteChanges(dir, `Restructure as ${kind}`);
 
   return { kind, features: [...features], createdFiles };
 }

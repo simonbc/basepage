@@ -4,6 +4,15 @@ import type { IncomingMessage, ServerResponse } from "node:http";
 import { newContent, slugify, type NewType } from "../commands/new.ts";
 import { refreshSemanticIndexIfReady } from "../commands/index.ts";
 import { readManifest } from "./manifest.ts";
+import {
+  changedFiles,
+  commitSiteChanges,
+  diffRevisions,
+  fileAtRevision,
+  listRevisions,
+  type ChangedFile,
+  type Revision,
+} from "./site-history.ts";
 
 const MAX_SAVE_BYTES = 1024 * 1024;
 const EDITABLE_EXTENSIONS = new Set([".md"]);
@@ -82,6 +91,7 @@ export function writeEditableSource(
   const nextBody = isStandalonePageFile(file) ? withPageTitle(title, body) : body;
   const next = replaceSource(raw, title, nextBody, draft);
   writeFileSync(path, next);
+  commitSiteChanges(siteDir, `Edit: ${title.trim() || file}`);
   return readEditableSource(siteDir, file);
 }
 
@@ -119,7 +129,7 @@ export function injectEditLink(siteDir: string, content: string, page: { inputPa
   const file = editFileParamForInputPath(siteDir, page.inputPath);
   if (!looksLikeHtml(content)) return content;
 
-  const links = [renderNewLink(siteDir, page.url ?? "/")];
+  const links = [`<a href="/__revisions">Revisions</a>`, renderNewLink(siteDir, page.url ?? "/")];
   if (file) {
     const params = new URLSearchParams({ file });
     if (page.url) params.set("return", page.url);
@@ -157,6 +167,11 @@ export function createDevEditorMiddleware(siteDir: string) {
       if (req.method === "GET" && url.pathname === "/__new") {
         const returnTo = safeReturnPath(url.searchParams.get("return"));
         sendHtml(res, renderNew(siteDir, returnTo, url.searchParams.get("type")));
+        return;
+      }
+
+      if (req.method === "GET" && url.pathname === "/__revisions") {
+        sendHtml(res, renderRevisions(siteDir, url.searchParams));
         return;
       }
 
@@ -199,6 +214,125 @@ export function createDevEditorMiddleware(siteDir: string) {
 
     next();
   };
+}
+
+function renderRevisions(siteDir: string, params: URLSearchParams): string {
+  const revisions = listRevisions(siteDir);
+  const to = safeRevision(params.get("to")) || revisions[0]?.hash || "";
+  const from = safeRevision(params.get("from")) || revisions[1]?.hash || revisions[0]?.hash || "";
+  const file = safeRevisionFile(params.get("file"));
+  const viewFile = safeRevisionFile(params.get("view"));
+  const files = from && to ? changedFiles(siteDir, from, to) : [];
+  const diff = from && to ? diffRevisions(siteDir, from, to, file || undefined) : "";
+  const viewed = viewFile && to ? readRevisionFile(siteDir, to, viewFile) : undefined;
+
+  return `<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Revisions</title>
+    ${editorStyles()}
+    <style>
+      .revision-page{max-width:min(72rem,100%);margin:0 auto;padding:2rem}
+      .revision-header{display:flex;align-items:center;justify-content:space-between;gap:1rem;margin-bottom:1.5rem}
+      .revision-header h1{font-size:1.4rem;margin:0}
+      .revision-form{display:grid;grid-template-columns:1fr 1fr auto;gap:.75rem;align-items:end;margin-bottom:1.5rem}
+      .revision-form label{display:grid;gap:.35rem;font-size:.8rem;color:var(--editor-muted)}
+      .revision-form select,.revision-form button{height:2.35rem;border-radius:.4rem;border:1px solid var(--editor-border);background:var(--editor-bg);color:var(--editor-text);padding:0 .65rem;font:inherit}
+      .revision-form button{cursor:pointer}
+      .revision-layout{display:grid;grid-template-columns:16rem 1fr;gap:1.25rem;align-items:start}
+      .changed-files{display:grid;gap:.25rem;margin:0;padding:0;list-style:none}
+      .changed-files a{display:block;padding:.35rem .45rem;border-radius:.35rem;color:var(--editor-text);text-decoration:none}
+      .changed-files a:hover,.changed-files a[aria-current=true]{background:var(--editor-soft)}
+      .revision-status{display:inline-block;min-width:1.5rem;color:var(--editor-muted);font-family:var(--editor-mono)}
+      .revision-panel{display:grid;gap:1rem}
+      pre.revision-diff,pre.revision-file{min-height:18rem;max-height:60vh;overflow:auto;margin:0;padding:1rem;border:1px solid var(--editor-border);border-radius:.55rem;background:var(--editor-surface);font:13px/1.45 var(--editor-mono);white-space:pre-wrap}
+      .empty-revisions{color:var(--editor-muted)}
+      @media (max-width:760px){.revision-page{padding:1rem}.revision-form,.revision-layout{grid-template-columns:1fr}}
+    </style>
+  </head>
+  <body>
+    <main class="revision-page">
+      <header class="revision-header">
+        <h1>Revisions</h1>
+        <a class="button" href="/">Back</a>
+      </header>
+      ${revisions.length ? renderRevisionControls(revisions, from, to) : `<p class="empty-revisions">No revisions yet.</p>`}
+      ${revisions.length ? `<section class="revision-layout">
+        <nav aria-label="Changed files">
+          <ul class="changed-files">
+            ${files.map((changed) => renderChangedFileLink(changed, from, to, file)).join("")}
+          </ul>
+        </nav>
+        <div class="revision-panel">
+          <pre class="revision-diff">${escapeHtml(diff || "No changes between these revisions.")}</pre>
+          ${viewed ? `<pre class="revision-file">${escapeHtml(viewed)}</pre>` : ""}
+        </div>
+      </section>` : ""}
+    </main>
+  </body>
+</html>`;
+}
+
+function renderRevisionControls(revisions: Revision[], from: string, to: string): string {
+  return `<form class="revision-form" method="get" action="/__revisions">
+    <label>From
+      <select name="from">
+        ${revisions.map((revision) => optionSelected(revision, from)).join("")}
+      </select>
+    </label>
+    <label>To
+      <select name="to">
+        ${revisions.map((revision) => optionSelected(revision, to)).join("")}
+      </select>
+    </label>
+    <button type="submit">Compare</button>
+  </form>`;
+}
+
+function optionSelected(revision: Revision, selected: string): string {
+  return `<option value="${escapeAttr(revision.hash)}"${revision.hash === selected ? " selected" : ""}>${escapeHtml(revision.shortHash)} · ${escapeHtml(revision.subject)} · ${escapeHtml(revision.date.slice(0, 10))}</option>`;
+}
+
+function renderChangedFileLink(file: ChangedFile, from: string, to: string, selected: string | null): string {
+  const diffParams = new URLSearchParams({ from, to, file: file.file });
+  const viewParams = new URLSearchParams({ from, to, file: file.file, view: file.file });
+  return `<li>
+    <a href="/__revisions?${escapeAttr(diffParams.toString())}" aria-current="${selected === file.file ? "true" : "false"}"><span class="revision-status">${escapeHtml(file.status)}</span>${escapeHtml(file.file)}</a>
+    <a href="/__revisions?${escapeAttr(viewParams.toString())}"><span class="revision-status">view</span>${escapeHtml(file.file)} @ selected</a>
+  </li>`;
+}
+
+function readRevisionFile(siteDir: string, revision: string, file: string): string | undefined {
+  try {
+    return fileAtRevision(siteDir, revision, file);
+  } catch {
+    return undefined;
+  }
+}
+
+function safeRevision(value: string | null): string | null {
+  if (!value) return null;
+  return /^[a-f0-9]{7,40}$/i.test(value) ? value : null;
+}
+
+function safeRevisionFile(value: string | null): string | null {
+  if (!value || value.includes("\0") || value.startsWith("/") || value.split(/[\\/]+/).includes("..")) return null;
+  return value;
+}
+
+function editorStyles(): string {
+  return `<link rel="stylesheet" href="/css/style.css" />
+    <style>
+      :root{color-scheme:light dark;--editor-bg:var(--bg,Canvas);--editor-surface:var(--surface,var(--bg,Canvas));--editor-text:var(--text,CanvasText);--editor-muted:var(--muted,color-mix(in srgb,var(--editor-text) 55%,transparent));--editor-border:var(--border,color-mix(in srgb,var(--editor-text) 18%,transparent));--editor-soft:var(--accent-soft,color-mix(in srgb,var(--accent,LinkText) 12%,transparent));--editor-mono:var(--font-mono,ui-monospace,"SF Mono",Menlo,Consolas,monospace)}
+      *{box-sizing:border-box}
+      body{margin:0;background:var(--editor-bg);color:var(--editor-text);font-family:var(--font-sans,var(--font,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif));line-height:1.55}
+      a{color:var(--accent,LinkText)}
+      .button{border:1px solid var(--editor-border);border-radius:999px;background:var(--editor-bg);color:var(--editor-text);padding:.6rem 1rem;text-decoration:none;line-height:1.1}
+      .button:hover{filter:brightness(.97)}
+      @media (prefers-color-scheme: dark){.button:hover{filter:brightness(1.12)}}
+    </style>`;
 }
 
 function splitFrontMatter(raw: string): FrontMatterParts {

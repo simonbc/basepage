@@ -1,5 +1,6 @@
 import { basename, resolve } from "node:path";
 import { scaffold, type ScaffoldMeta } from "../lib/scaffold.ts";
+import { ensureSiteHistory } from "../lib/site-history.ts";
 
 export interface InitOptions extends ScaffoldMeta {
   dir: string;
@@ -15,6 +16,7 @@ export function initSite(opts: InitOptions): { dir: string; template: string } {
     tagline: opts.tagline,
     domain: opts.domain,
   });
+  ensureSiteHistory(dir);
   return { dir, template };
 }
 

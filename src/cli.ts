@@ -17,6 +17,7 @@ import { autoRegisterSite, basepageHome, readRegistry, setDefaultSite } from "./
 import { manifestPath } from "./lib/manifest.ts";
 import { listTemplates, describeTemplates, resolveTemplateChoice } from "./lib/scaffold.ts";
 import { resolveSiteDir } from "./lib/site-resolver.ts";
+import { ensureSiteHistory } from "./lib/site-history.ts";
 import type { Interface as ReadlineInterface } from "node:readline/promises";
 
 const VERSION = "0.1.0";
@@ -51,8 +52,10 @@ async function cmdInit(positionals: string[], flags: Record<string, string | boo
   const dir = resolve(positionals[0] ?? ".");
   const existing = existsSync(manifestPath(dir));
   if (existing) {
+    ensureSiteHistory(dir);
     const registered = autoRegisterSite(dir);
     console.log(`\n✓ Already a Basepage site in ${relativeOrDot(dir)}`);
+    console.log("✓ Local git history is ready");
     console.log(`✓ Remembered as "${registered.alias}"${registered.defaulted ? " (default)" : ""}\n`);
     console.log("Next:");
     console.log("  basepage serve     # live preview; prints the localhost URL");

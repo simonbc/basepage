@@ -1,6 +1,7 @@
 import { existsSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { readManifest } from "../lib/manifest.ts";
+import { commitSiteChanges } from "../lib/site-history.ts";
 
 export type NewType = "page" | "post" | "note";
 
@@ -48,6 +49,7 @@ export function newContent(opts: NewOptions): NewResult {
     const file = join(dir, "src", `${slug}.md`);
     if (existsSync(file)) throw new Error(`Already exists: src/${slug}.md`);
     writeFileSync(file, pageScaffold(title, body, draft));
+    commitSiteChanges(dir, `Add page: ${title}`);
     return { path: file, type: "page" };
   }
 
@@ -60,6 +62,7 @@ export function newContent(opts: NewOptions): NewResult {
     const file = join(postsDir, `${stamp}-${slug}.md`);
     if (existsSync(file)) throw new Error(`Already exists: src/posts/${stamp}-${slug}.md`);
     writeFileSync(file, postScaffold(title, stamp, body, draft));
+    commitSiteChanges(dir, `Add post: ${title}`);
     return { path: file, type: "post" };
   }
 
@@ -71,6 +74,7 @@ export function newContent(opts: NewOptions): NewResult {
     const file = join(notesDir, `${slug}.md`);
     if (existsSync(file)) throw new Error(`Already exists: src/notes/${slug}.md`);
     writeFileSync(file, noteScaffold(title, body, draft));
+    commitSiteChanges(dir, `Add note: ${title}`);
     return { path: file, type: "note" };
   }
 

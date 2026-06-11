@@ -77,6 +77,25 @@ test("rss feature produces RSS 2.0 and JSON feeds for the blog kind", async () =
   expect(jsonFeed.items[0].content_html).toContain("<p>");
 });
 
+test("blog excerpts are escaped once on the homepage", async () => {
+  const dir = join(tmp(), "site");
+  initSite({ dir, template: "blog", title: "Ada", domain: "ada.dev" });
+  newContent({
+    siteDir: dir,
+    type: "post",
+    name: "Quoted Text",
+    title: "Quoted Text",
+    body: `Here's a "quoted" thought about Jottit & Tinypost.`,
+    date: new Date("2026-04-05T00:00:00Z"),
+  });
+
+  await build(dir);
+  const html = readFileSync(join(dir, "_site", "index.html"), "utf8");
+  expect(html).toContain("Here&#39;s a &quot;quoted&quot; thought about Jottit &amp; Tinypost.");
+  expect(html).not.toContain("Here&amp;#39;s");
+  expect(html).not.toContain("&amp;quot;");
+});
+
 test("blank kind builds a single page with no feed", async () => {
   const dir = join(tmp(), "card");
   initSite({ dir, template: "blank", title: "Card" });

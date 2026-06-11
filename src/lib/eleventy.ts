@@ -246,7 +246,7 @@ function excerpt(value: unknown, words = 40): string {
   const parts = text.split(" ");
   const clipped = Number.isFinite(limit) && limit > 0 ? parts.slice(0, limit) : parts;
   const suffix = clipped.length < parts.length ? "..." : "";
-  return xmlEscape(`${clipped.join(" ")}${suffix}`);
+  return `${clipped.join(" ")}${suffix}`;
 }
 
 function stripHtml(value: string): string {

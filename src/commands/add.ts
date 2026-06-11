@@ -1,6 +1,7 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join, relative, resolve } from "node:path";
 import { manifestPath, readManifest } from "../lib/manifest.ts";
+import { commitSiteChanges } from "../lib/site-history.ts";
 
 /** Individual features `basepage add` can enable. */
 export const KNOWN_FEATURES = ["blog", "rss", "wikilinks", "backlinks", "syntax-highlight"];
@@ -53,6 +54,7 @@ export function addFeature(siteDir: string, target: string): AddResult {
 
   raw.features = [...features];
   writeFileSync(file, JSON.stringify(raw, null, 2) + "\n");
+  commitSiteChanges(dir, `Add ${target}`);
 
   return { target, added, createdFiles };
 }

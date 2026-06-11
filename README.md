@@ -140,15 +140,27 @@ the scaffold never imports plugins. `basepage add <feature>` just flips a manife
 (and drops in any presentation files); the build wiring is handled for you. The core
 pipeline stays fixed: scaffold → persist → generate → view → publish.
 
+### Git-backed history
+
+`basepage init` creates a local git repo for every site and makes an initial commit.
+Basepage-owned writes (`new`, `capture`, `add`, `restructure`, browser save/create,
+and domain changes) create small commits automatically, giving every agent edit a
+local revision. Build output is ignored.
+
+In `basepage serve`, the local tools include `Revisions`, a browser page for comparing
+two revisions, viewing changed files, and inspecting a file at a selected revision.
+It is local-only and is never included in `basepage build` or published output.
+
 ### Local editing
 
 `basepage serve` is also a tiny local authoring UI. In serve mode only, Basepage
 injects local tools into generated HTML pages: `Edit` appears on pages backed by a
-markdown source file under `src/`, and `+ New` appears everywhere. `Edit` opens a
-same-port editor at `/__edit` with a title field, draft checkbox, and markdown body.
-When multiple content types are enabled, `+ New` opens a small picker for page, post,
-or note. Each choice goes straight to `/__new?type=...`, a blank editor for that
-content type. New browser-created content defaults to `draft: true`.
+markdown source file under `src/`, `+ New` appears everywhere, and `Revisions` opens
+the local git-backed history UI. `Edit` opens a same-port editor at `/__edit` with a
+title field, draft checkbox, and markdown body. When multiple content types are
+enabled, `+ New` opens a small picker for page, post, or note. Each choice goes
+straight to `/__new?type=...`, a blank editor for that content type. New
+browser-created content defaults to `draft: true`.
 
 Saving submits to `/__save` or `/__create`, updates source files, preserves unrelated
 front matter, and lets Eleventy's watcher rebuild the preview immediately.
@@ -198,7 +210,8 @@ pass `--login <github-user>` to check the exact CNAME target. A custom-domain pu
 means the GitHub repo and Pages deploy are ready; the domain itself is not reachable
 until the registrar DNS records match.
 
-The build is pushed to a `gh-pages` branch (`main` stays the default branch).
+The editable source repo is pushed to `main`; the built site is pushed to a `gh-pages`
+branch.
 `basepage unpublish` removes that branch to take the site offline; the repo is kept.
 
 ## Development

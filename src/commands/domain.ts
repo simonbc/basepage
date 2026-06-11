@@ -4,6 +4,7 @@ import * as dns from "node:dns/promises";
 import { parse } from "tldts";
 import { manifestPath, readManifest } from "../lib/manifest.ts";
 import { hostOf, isApexDomain, planPublish, type DnsRecord } from "../lib/publish-plan.ts";
+import { commitSiteChanges } from "../lib/site-history.ts";
 
 export interface DnsResolver {
   resolve4(host: string): Promise<string[]>;
@@ -44,6 +45,7 @@ export function setDomain(siteDir: string, domain: string): { domain: string; pa
   const normalized = normalizeDomain(domain);
   raw.domain = normalized;
   writeFileSync(path, `${JSON.stringify(raw, null, 2)}\n`);
+  commitSiteChanges(dir, `Set domain: ${normalized}`);
   return { domain: normalized, path };
 }
 
