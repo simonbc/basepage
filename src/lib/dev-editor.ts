@@ -7,8 +7,10 @@ import { readManifest } from "./manifest.ts";
 import {
   changedFiles,
   commitSiteChanges,
+  diffFileRevision,
   diffRevisions,
   fileAtRevision,
+  listFileRevisions,
   listRevisions,
   type ChangedFile,
   type Revision,
@@ -133,7 +135,9 @@ export function injectEditLink(siteDir: string, content: string, page: { inputPa
   if (file) {
     const params = new URLSearchParams({ file });
     if (page.url) params.set("return", page.url);
+    const historyParams = new URLSearchParams({ file });
     links.unshift(`<a href="/__edit?${escapeAttr(params.toString())}">Edit</a>`);
+    links.splice(1, 0, `<a href="/__history?${escapeAttr(historyParams.toString())}">History</a>`);
   }
   const widget = `<style>
 .basepage-dev-links{position:fixed;inset-block-start:.75rem;inset-inline-end:1.5rem;z-index:2147483647;display:flex;gap:.4rem;font:500 13px/1.2 var(--font-sans,var(--font,ui-sans-serif,system-ui,sans-serif))}
@@ -172,6 +176,11 @@ export function createDevEditorMiddleware(siteDir: string) {
 
       if (req.method === "GET" && url.pathname === "/__revisions") {
         sendHtml(res, renderRevisions(siteDir, url.searchParams));
+        return;
+      }
+
+      if (req.method === "GET" && url.pathname === "/__history") {
+        sendHtml(res, renderFileHistory(siteDir, url.searchParams));
         return;
       }
 
@@ -214,6 +223,93 @@ export function createDevEditorMiddleware(siteDir: string) {
 
     next();
   };
+}
+
+function renderFileHistory(siteDir: string, params: URLSearchParams): string {
+  const file = params.get("file") ?? "";
+  resolveEditableSourcePath(siteDir, file);
+  const repoFile = `src/${file}`;
+  const revisions = listFileRevisions(siteDir, repoFile);
+  const selected = safeRevision(params.get("revision")) || revisions[0]?.hash || "";
+  const current = revisions.find((revision) => revision.hash === selected) || revisions[0];
+  const diff = current ? diffFileRevision(siteDir, current.hash, repoFile) : "";
+  const viewed = current ? readRevisionFile(siteDir, current.hash, repoFile) : undefined;
+
+  return `<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>History · ${escapeHtml(file)}</title>
+    ${editorStyles()}
+    ${historyStyles()}
+  </head>
+  <body>
+    <main class="history-page">
+      <header class="history-header">
+        <div>
+          <p class="history-kicker">Page history</p>
+          <h1>${escapeHtml(file)}</h1>
+          <p class="history-path">${escapeHtml(repoFile)}</p>
+        </div>
+        <nav class="history-actions">
+          <a class="button" href="/__edit?${escapeAttr(new URLSearchParams({ file }).toString())}">Edit current</a>
+          <a class="button" href="/__revisions">All revisions</a>
+          <a class="button" href="${escapeAttr(renderedUrlForFile(file))}">Back</a>
+        </nav>
+      </header>
+      ${revisions.length ? `<section class="history-layout">
+        <aside>
+          <ol class="history-list">
+            ${revisions.map((revision) => renderHistoryRevisionLink(file, revision, current?.hash || "")).join("")}
+          </ol>
+        </aside>
+        <div class="history-panel">
+          <div class="history-selected">
+            <strong>${escapeHtml(current?.subject || "Revision")}</strong>
+            ${current ? `<span>${escapeHtml(current.shortHash)} · ${escapeHtml(current.date)}</span>` : ""}
+          </div>
+          <h2>Diff from previous version</h2>
+          <pre class="history-diff">${escapeHtml(diff || "No file changes in this revision.")}</pre>
+          <h2>File at this revision</h2>
+          <pre class="history-file">${escapeHtml(viewed || "")}</pre>
+        </div>
+      </section>` : `<p class="empty-revisions">No history yet for this page.</p>`}
+    </main>
+  </body>
+</html>`;
+}
+
+function renderHistoryRevisionLink(file: string, revision: Revision, selected: string): string {
+  const params = new URLSearchParams({ file, revision: revision.hash });
+  return `<li>
+    <a href="/__history?${escapeAttr(params.toString())}" aria-current="${revision.hash === selected ? "true" : "false"}">
+      <span>${escapeHtml(revision.subject)}</span>
+      <small>${escapeHtml(revision.shortHash)} · ${escapeHtml(revision.date.slice(0, 10))}</small>
+    </a>
+  </li>`;
+}
+
+function historyStyles(): string {
+  return `<style>
+    .history-page{max-width:min(78rem,100%);margin:0 auto;padding:2rem}
+    .history-header{display:flex;align-items:flex-start;justify-content:space-between;gap:1rem;margin-bottom:1.5rem}
+    .history-kicker{margin:0 0 .25rem;color:var(--editor-muted);font-size:.78rem;text-transform:uppercase;letter-spacing:.06em}
+    .history-header h1{font-size:1.4rem;margin:0;overflow-wrap:anywhere}
+    .history-path{margin:.35rem 0 0;color:var(--editor-muted);font:12px/1.4 var(--editor-mono);overflow-wrap:anywhere}
+    .history-actions{display:flex;gap:.5rem;flex-wrap:wrap;justify-content:flex-end}
+    .history-layout{display:grid;grid-template-columns:18rem 1fr;gap:1.25rem;align-items:start}
+    .history-list{display:grid;gap:.35rem;margin:0;padding:0;list-style:none}
+    .history-list a{display:grid;gap:.2rem;padding:.55rem .65rem;border-radius:.5rem;color:var(--editor-text);text-decoration:none}
+    .history-list a:hover,.history-list a[aria-current=true]{background:var(--editor-soft)}
+    .history-list small{color:var(--editor-muted);font-size:.78rem}
+    .history-panel{display:grid;gap:.75rem;min-width:0}
+    .history-selected{display:flex;align-items:baseline;justify-content:space-between;gap:1rem;color:var(--editor-muted)}
+    .history-selected strong{color:var(--editor-text)}
+    .history-panel h2{font-size:.9rem;margin:.5rem 0 0;color:var(--editor-muted)}
+    pre.history-diff,pre.history-file{min-height:14rem;max-height:46vh;overflow:auto;margin:0;padding:1rem;border:1px solid var(--editor-border);border-radius:.55rem;background:var(--editor-surface);font:13px/1.45 var(--editor-mono);white-space:pre-wrap}
+    @media (max-width:820px){.history-page{padding:1rem}.history-header{display:grid}.history-actions{justify-content:flex-start}.history-layout{grid-template-columns:1fr}}
+  </style>`;
 }
 
 function renderRevisions(siteDir: string, params: URLSearchParams): string {

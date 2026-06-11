@@ -124,7 +124,20 @@ test("new link goes straight to the page editor when only pages are available", 
 
   expect(html).toContain('/__new?type=page&amp;return=%2F');
   expect(html).toContain("/__revisions");
+  expect(html).not.toContain("/__history");
   expect(html).not.toContain('<details class="basepage-dev-new">');
+});
+
+test("editable pages get a per-page history link", () => {
+  const dir = site();
+  const html = injectEditLink(dir, "<!doctype html><html><body></body></html>", {
+    inputPath: "./src/about.md",
+    url: "/about/",
+  });
+
+  expect(html).toContain('/__edit?file=about.md&amp;return=%2Fabout%2F');
+  expect(html).toContain('/__history?file=about.md');
+  expect(html).toContain("/__revisions");
 });
 
 test("new link ignores post scaffold files when the blog feature is disabled", () => {

@@ -53,8 +53,8 @@ sections and **`new`** content onto it. Three verbs, three jobs — don't confus
    templates in `src/_includes/`. Write real copy into the markdown/`.njk` files. Take
    the look wherever the user asked.
 4. **Preview.** `basepage serve` — it prints the localhost URL, and edits to content
-   and CSS live-reload. Serve mode also injects local-only `Edit`/`+ New`/`Revisions`
-   tools for markdown pages/posts/notes. Use this to check your work.
+   and CSS live-reload. Serve mode also injects local-only `Edit`/`History`/`+ New`/
+   `Revisions` tools for markdown pages/posts/notes. Use this to check your work.
 5. **Publish** when the user approves: `basepage publish` (browser sign-in, no API
    keys — it reuses the GitHub CLI login if present). For a custom domain, run
    `basepage domain set <domain>` first, or use `basepage publish --domain <domain>`;
@@ -99,9 +99,10 @@ providers need their API key available.
 ## Git-backed history
 
 `basepage init` creates a local git repo and initial commit. Basepage-owned writes
-commit automatically, so agent edits have a revision trail. In serve mode, use the
-local `Revisions` link to compare commits or view changed files. On publish, Basepage
-pushes the editable source to `main` and the built site to `gh-pages`.
+commit automatically, so agent edits have a revision trail. In serve mode, use
+`History` on an editable page to inspect that page's revisions; use `Revisions` for
+whole-site diffs. On publish, Basepage pushes the editable source to `main` and the
+built site to `gh-pages`.
 
 ## Preset routing (intent → `--template`)
 
@@ -155,6 +156,7 @@ src/
   (a no-domain GitHub project sub-path would break in-content wikilinks).
 - Publish is human-gated: preview with `serve`, get the user's OK, then `publish`.
 - Browser editing/history is local-only: `serve` injects the links and handles
-  `/__edit`, `/__save`, `/__new`, `/__create`, and `/__revisions`; `build`/`publish`
-  output stays plain static files. Saves are guarded to `.md` files under the site's
-  `src/` directory, so templates like `src/index.njk` are not browser-editable.
+  `/__edit`, `/__save`, `/__new`, `/__create`, `/__history`, and `/__revisions`;
+  `build`/`publish` output stays plain static files. Saves are guarded to `.md` files
+  under the site's `src/` directory, so templates like `src/index.njk` are not
+  browser-editable.

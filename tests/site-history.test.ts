@@ -4,7 +4,15 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { initSite } from "../src/commands/init.ts";
 import { newContent } from "../src/commands/new.ts";
-import { changedFiles, diffRevisions, fileAtRevision, listRevisions } from "../src/lib/site-history.ts";
+import {
+  changedFiles,
+  diffFileRevision,
+  diffRevisions,
+  fileAtRevision,
+  listFileRevisions,
+  listRevisions,
+} from "../src/lib/site-history.ts";
+import { writeEditableSource } from "../src/lib/dev-editor.ts";
 
 function tmp() {
   return join(mkdtempSync(join(tmpdir(), "bp-history-")), "site");
@@ -35,6 +43,21 @@ test("new content creates a revision and exposes diffs", () => {
   expect(files).toContainEqual({ status: "A", file: "src/about.md" });
   expect(diffRevisions(dir, revisions[1].hash, revisions[0].hash)).toContain("+First body.");
   expect(fileAtRevision(dir, revisions[0].hash, "src/about.md")).toContain("First body.");
+});
+
+test("file history only lists revisions for one source file", () => {
+  const dir = tmp();
+  initSite({ dir, template: "blank", title: "History" });
+
+  newContent({ siteDir: dir, type: "page", name: "About", body: "First body." });
+  newContent({ siteDir: dir, type: "page", name: "Contact", body: "Email me." });
+  writeEditableSource(dir, "about.md", "About", "Second body.");
+
+  const about = listFileRevisions(dir, "src/about.md");
+  expect(about.map((revision) => revision.subject)).toEqual(["Edit: About", "Add page: About"]);
+  expect(about.map((revision) => revision.subject)).not.toContain("Add page: Contact");
+  expect(diffFileRevision(dir, about[0].hash, "src/about.md")).toContain("Second body.");
+  expect(fileAtRevision(dir, about[1].hash, "src/about.md")).toContain("First body.");
 });
 
 test("history ignores build output", () => {

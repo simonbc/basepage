@@ -85,6 +85,21 @@ export function listRevisions(siteDir: string, limit = 50): Revision[] {
   });
 }
 
+export function listFileRevisions(siteDir: string, file: string, limit = 50): Revision[] {
+  const dir = resolve(siteDir);
+  if (!existsSync(join(dir, ".git"))) return [];
+  const safeFile = validateRepoPath(file);
+  const format = "%H%x1f%h%x1f%cI%x1f%s";
+  const res = git(dir, ["log", "--follow", `--max-count=${limit}`, `--format=${format}`, "--", safeFile], {
+    allowFailure: true,
+  });
+  if (res.status !== 0 || !res.stdout.trim()) return [];
+  return res.stdout.trim().split("\n").map((line) => {
+    const [hash, shortHash, date, subject] = line.split("\x1f");
+    return { hash, shortHash, date, subject };
+  });
+}
+
 export function changedFiles(siteDir: string, from: string, to: string): ChangedFile[] {
   const dir = resolve(siteDir);
   const res = git(dir, ["diff", "--name-status", from, to], { allowFailure: true });
@@ -99,6 +114,17 @@ export function diffRevisions(siteDir: string, from: string, to: string, file?: 
   const dir = resolve(siteDir);
   const args = ["diff", "--no-ext-diff", "--src-prefix=a/", "--dst-prefix=b/", from, to];
   if (file) args.push("--", validateRepoPath(file));
+  const res = git(dir, args, { allowFailure: true });
+  return res.stdout || res.stderr || "";
+}
+
+export function diffFileRevision(siteDir: string, revision: string, file: string): string {
+  const dir = resolve(siteDir);
+  const safeFile = validateRepoPath(file);
+  const parent = git(dir, ["rev-parse", `${revision}^`], { allowFailure: true });
+  const args = parent.status === 0
+    ? ["diff", "--no-ext-diff", "--src-prefix=a/", "--dst-prefix=b/", parent.stdout.trim(), revision, "--", safeFile]
+    : ["show", "--format=", "--no-ext-diff", "--src-prefix=a/", "--dst-prefix=b/", revision, "--", safeFile];
   const res = git(dir, args, { allowFailure: true });
   return res.stdout || res.stderr || "";
 }
